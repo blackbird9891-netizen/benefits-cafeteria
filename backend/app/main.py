@@ -1,9 +1,12 @@
 """Точка входа приложения «Кафетерий льгот»."""
 
+import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 
 from app.api import auth, pult, shop
 from app.config import settings
@@ -57,3 +60,16 @@ app.include_router(pult.router, prefix="/api/pult", tags=["pult"])
 @app.get("/api/health", tags=["service"])
 def health():
     return {"status": "ok"}
+
+
+# Раздача клиентской части тем же сервисом.
+# В контуре с docker-compose фронт отдаёт nginx, здесь — запасной путь
+# для одиночного развёртывания (один контейнер вместо трёх).
+FRONTEND = Path(__file__).resolve().parents[2] / "frontend" / "index.html"
+
+
+@app.get("/", include_in_schema=False)
+def index():
+    if FRONTEND.exists():
+        return FileResponse(FRONTEND, media_type="text/html; charset=utf-8")
+    return {"detail": "Клиентская часть не найдена. API доступен по /api/docs"}

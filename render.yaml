@@ -1,0 +1,22 @@
+# Развёртывание демонстрационного стенда одним сервисом.
+# База — SQLite в контейнере: при перезапуске данные пересоздаются из сидов,
+# для демо это даже удобнее, чем сохранять состояние между сессиями.
+services:
+  - type: web
+    name: benefits-cafeteria
+    runtime: python
+    region: frankfurt
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m app.seed && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      - key: DATABASE_URL
+        value: sqlite:///./cafeteria.db
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: "*"
+    healthCheckPath: /api/health
