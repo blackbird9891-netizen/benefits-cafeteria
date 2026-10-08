@@ -44,6 +44,8 @@ GRADE_BUDGETS = {"G9": 5000, "G11": 6500, "G12": 8000, "G13": 9000, "G15": 11000
 
 @router.get("/dashboard")
 def dashboard(db: Session = Depends(get_db), actor: User = Depends(require_pult("dash"))):
+    """Агрегаты по всем сотрудникам. Лоты загружаются одним запросом,
+    чтобы не делать отдельный SELECT на каждого."""
     users = db.scalars(select(User).where(User.role != Role.EXCLUDED.value)).all()
 
     totals = {"granted": 0, "spent": 0, "left": 0}
@@ -274,11 +276,13 @@ def freeze_points(user_id: int, value: bool = True, db: Session = Depends(get_db
 # ---------- заказы и согласования ----------
 
 @router.get("/orders", response_model=list[schemas.OrderOut])
-def admin_orders(status_filter: str | None = None, db: Session = Depends(get_db),
+def admin_orders(status_filter: str | None = None, limit: int = 200, offset: int = 0,
+                 db: Session = Depends(get_db),
                  actor: User = Depends(require_pult("orders"))):
     stmt = select(Order).order_by(Order.created_at.desc())
     if status_filter:
         stmt = stmt.where(Order.status == status_filter)
+    stmt = stmt.limit(min(limit, 500)).offset(offset)
     return [order_out(o) for o in db.scalars(stmt).all()]
 
 
@@ -291,6 +295,15 @@ def decide_order(order_id: int, approved: bool, comment: str = "",
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Заказ не найден")
     if order.status != OrderStatus.APPROVE.value:
         raise HTTPException(status.HTTP_409_CONFLICT, "Заказ не находится на согласовании")
+
+    # ФТ-ЗАК.3: очередь согласования строится по руководителю сотрудника.
+    # Согласовать собственную заявку нельзя ни при какой роли.
+    if order.user_id == actor.id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN,
+                            "Нельзя согласовать собственную заявку")
+    if actor.role not in (Role.HR.value, Role.ADMIN.value) and order.user.chief != actor.full_name:
+        raise HTTPException(status.HTTP_403_FORBIDDEN,
+                            f"Согласующий по этой заявке — {order.user.chief}")
 
     for step in order.approvals_chain:
         if step.result is None:
@@ -525,9 +538,12 @@ def export_csv(db: Session = Depends(get_db), actor: User = Depends(require_pult
 # ---------- аудит и аномалии ----------
 
 @router.get("/audit", response_model=list[schemas.AuditOut])
-def read_audit(limit: int = 200, db: Session = Depends(get_db),
+def read_audit(limit: int = 200, offset: int = 0, db: Session = Depends(get_db),
                actor: User = Depends(require_pult("audit"))):
-    return db.scalars(select(AuditLog).order_by(AuditLog.at.desc()).limit(limit)).all()
+    """Журнал растёт неограниченно, поэтому выдача всегда ограничена страницей."""
+    return db.scalars(
+        select(AuditLog).order_by(AuditLog.at.desc()).limit(min(limit, 1000)).offset(offset)
+    ).all()
 
 
 @router.get("/anomalies", response_model=list[schemas.AnomalyOut])

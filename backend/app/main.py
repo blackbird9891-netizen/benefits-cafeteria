@@ -44,10 +44,13 @@ app = FastAPI(
     openapi_url="/api/openapi.json",
 )
 
+# Спецификация запрещает сочетание подстановочного origin с учётными данными:
+# браузер отвергнет такой ответ. Токен передаётся заголовком, cookie не используются.
+_origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[o.strip() for o in settings.cors_origins.split(",")],
-    allow_credentials=True,
+    allow_origins=_origins,
+    allow_credentials="*" not in _origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )

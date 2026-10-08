@@ -28,6 +28,10 @@ ROLE_MATRIX: dict[str, dict] = {
         "title": "Декрет",
         "description": "Все разделы, кроме страховых программ",
         "denied_sections": ["health"],
+        # РОЛ.3: ограничение применяется и к отдельным позициям. Страховые
+        # программы встречаются вне раздела «Моё здоровье» — например,
+        # ДМС для члена семьи лежит в разделе «Семья и дети».
+        "denied_item_types": ["dms", "dms-family"],
         "only_sections": None,
         "pult": [],
     },
@@ -104,6 +108,11 @@ def require_admin(user: User = Depends(get_current_user)) -> User:
     if user.role != Role.ADMIN.value:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Требуются права администратора")
     return user
+
+
+def denied_item_types(user: User) -> list[str]:
+    """Типы позиций, закрытые для роли независимо от раздела (РОЛ.3)."""
+    return ROLE_MATRIX.get(user.role, {}).get("denied_item_types", [])
 
 
 def visible_section_codes(user: User, all_codes: list[str]) -> list[str]:

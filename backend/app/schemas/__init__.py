@@ -134,14 +134,14 @@ class LotOut(ORMModel):
 class GrantIn(BaseModel):
     user_id: int
     amount: int = Field(gt=0)
-    reason: str = Field(min_length=1)
+    reason: str = Field(min_length=1, max_length=255)
     burnable: bool = True
 
 
 class SpendIn(BaseModel):
     user_id: int
     amount: int = Field(gt=0)
-    reason: str = Field(min_length=1)
+    reason: str = Field(min_length=1, max_length=255)
 
 
 # --- заказы ---
@@ -233,9 +233,9 @@ class DmsOut(ORMModel):
 # --- поддержка и коммуникации ---
 
 class TicketIn(BaseModel):
-    topic: str
-    body: str
-    attachment: str = ""
+    topic: str = Field(min_length=1, max_length=255)
+    body: str = Field(min_length=1, max_length=4000)
+    attachment: str = Field(default="", max_length=255)
 
 
 class TicketOut(ORMModel):
@@ -260,7 +260,7 @@ class NewsOut(ORMModel):
 
 
 class CommentIn(BaseModel):
-    body: str
+    body: str = Field(min_length=1, max_length=2000)
 
 
 class SurveyOut(ORMModel):
@@ -281,7 +281,7 @@ class TransferIn(BaseModel):
 
 
 class CharityIn(BaseModel):
-    fund: str
+    fund: str = Field(min_length=1, max_length=255)
     amount: int = Field(gt=0)
 
 
@@ -312,4 +312,4 @@ class SettingOut(ORMModel):
 
 
 class SettingIn(BaseModel):
-    value: str
+    value: str = Field(max_length=255)

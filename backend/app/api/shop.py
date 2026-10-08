@@ -5,14 +5,20 @@ import string
 from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app import schemas
-from app.api.deps import ROLE_MATRIX, get_active_user, visible_section_codes
+from app.api.deps import (
+    ROLE_MATRIX,
+    denied_item_types,
+    get_active_user,
+    visible_section_codes,
+)
 from app.core import points as pts
 from app.database import get_db
 from app.models import (
+    Anomaly,
     Campaign,
     CatalogItem,
     CharityDonation,
@@ -24,8 +30,10 @@ from app.models import (
     Order,
     OrderApproval,
     OrderStatus,
+    PointLot,
     PlatformSetting,
     PromoBatch,
+    Section,
     Survey,
     SurveyVote,
     Ticket,
@@ -144,15 +152,17 @@ def gen_code(item: CatalogItem) -> str:
 
 
 def next_public_id(db: Session, prefix: str, model) -> str:
-    count = db.scalar(select(model.id).order_by(model.id.desc())) or 0
-    return f"{prefix}-{100000 + count + random.randint(1, 99)}"
+    """Последовательный номер. Случайная часть убрана: при оформлении
+    нескольких позиций подряд она давала коллизии на уникальном поле."""
+    last = db.scalar(select(func.max(model.id))) or 0
+    return f"{prefix}-{100000 + last + 1}"
 
 
 # ---------- профиль ----------
 
 @router.get("/me", response_model=schemas.MeOut)
 def read_me(db: Session = Depends(get_db), user: User = Depends(get_active_user)):
-    all_codes = [s.code for s in db.scalars(select(__import__("app.models", fromlist=["Section"]).Section)).all()]
+    all_codes = [s.code for s in db.scalars(select(Section)).all()]
     rules = ROLE_MATRIX.get(user.role, {})
     out_user = schemas.UserOut.model_validate(user)
     out_user.role_title = rules.get("title", user.role)
@@ -166,8 +176,6 @@ def read_me(db: Session = Depends(get_db), user: User = Depends(get_active_user)
 
 @router.get("/me/points", response_model=list[schemas.LotOut])
 def my_points(db: Session = Depends(get_db), user: User = Depends(get_active_user)):
-    from app.models import PointLot
-
     lots = db.scalars(
         select(PointLot).where(PointLot.user_id == user.id).order_by(PointLot.granted_at.desc())
     ).all()
@@ -178,8 +186,6 @@ def my_points(db: Session = Depends(get_db), user: User = Depends(get_active_use
 
 @router.get("/sections", response_model=list[schemas.SectionOut])
 def list_sections(db: Session = Depends(get_db), user: User = Depends(get_active_user)):
-    from app.models import Section
-
     sections = db.scalars(select(Section).order_by(Section.sort_order)).all()
     allowed = visible_section_codes(user, [s.code for s in sections])
     return [s for s in sections if s.code in allowed]
@@ -194,8 +200,6 @@ def list_catalog(
     db: Session = Depends(get_db),
     user: User = Depends(get_active_user),
 ):
-    from app.models import Section
-
     sections = db.scalars(select(Section)).all()
     allowed_codes = visible_section_codes(user, [s.code for s in sections])
     allowed_ids = [s.id for s in sections if s.code in allowed_codes]
@@ -211,6 +215,10 @@ def list_catalog(
     if max_price:
         stmt = stmt.where(CatalogItem.price <= max_price)
 
+    denied = denied_item_types(user)
+    if denied:
+        stmt = stmt.where(CatalogItem.item_type.notin_(denied))
+
     items = db.scalars(stmt).all()
     if q:
         needle = q.lower()
@@ -225,6 +233,9 @@ def read_item(item_id: int, db: Session = Depends(get_db), user: User = Depends(
     item = db.get(CatalogItem, item_id)
     if not item:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Позиция не найдена")
+    if item.item_type in denied_item_types(user):
+        raise HTTPException(status.HTTP_403_FORBIDDEN,
+                            f"Позиция недоступна для роли «{ROLE_MATRIX.get(user.role, {}).get('title', user.role)}»")
     return item_out(db, item, user)
 
 
@@ -250,6 +261,9 @@ def checkout(
         item = db.get(CatalogItem, line.item_id)
         if not item or item.archived:
             raise HTTPException(status.HTTP_404_NOT_FOUND, f"Позиция {line.item_id} недоступна")
+        if item.item_type in denied_item_types(user):
+            raise HTTPException(status.HTTP_403_FORBIDDEN,
+                                f"«{item.title}»: позиция недоступна для вашей роли")
 
         opts = line.options or {}
         price = item.price
@@ -321,8 +335,6 @@ def checkout(
             if batch:
                 batch.used += 1
                 if batch.total - batch.used <= item.low_at:
-                    from app.models import Anomaly
-
                     db.add(Anomaly(
                         rule="Остаток промокодов ниже порога",
                         actor="Система",
@@ -387,11 +399,12 @@ def cancel_order(order_id: int, db: Session = Depends(get_db), user: User = Depe
     order = db.get(Order, order_id)
     if not order or order.user_id != user.id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Заказ не найден")
-    if order.status not in (OrderStatus.NEW.value, OrderStatus.APPROVE.value, OrderStatus.WORK.value):
-        raise HTTPException(status.HTTP_409_CONFLICT, "Заказ в этом статусе отмене не подлежит")
+    # Порядок важен: для промокода причина отказа конкретнее, чем «не тот статус».
     if order.item.item_type == ItemType.GIFT.value:
         raise HTTPException(status.HTTP_409_CONFLICT,
                             "Промокод выдан и в ротацию не возвращается, отмена невозможна")
+    if order.status not in (OrderStatus.NEW.value, OrderStatus.APPROVE.value, OrderStatus.WORK.value):
+        raise HTTPException(status.HTTP_409_CONFLICT, "Заказ в этом статусе отмене не подлежит")
 
     block = window_block(db)
     if block:

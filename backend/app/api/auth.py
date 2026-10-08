@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app import schemas
 from app.core.points import write_audit
+from app.config import settings
 from app.core.security import create_access_token, verify_password
 from app.database import get_db
 from app.models import User
@@ -73,8 +74,15 @@ def invite_login(payload: schemas.InviteRequest, db: Session = Depends(get_db)):
 
 @router.get("/demo-accounts")
 def demo_accounts(db: Session = Depends(get_db)):
-    """Тестовые учётные записи демо-стенда — выводятся на экране входа."""
+    """Тестовые учётные записи демо-стенда — выводятся на экране входа.
+
+    Маршрут отдаёт пароли и существует только ради демонстрации.
+    В продуктивной сборке (DEMO_MODE=0) возвращает 404.
+    """
     from app.api.deps import ROLE_MATRIX
+
+    if not settings.demo_mode:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Недоступно")
 
     rows = db.scalars(select(User).order_by(User.id)).all()
     passwords = {"hr": "hr1234", "admin": "admin1234"}
