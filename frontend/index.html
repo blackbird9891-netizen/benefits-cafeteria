@@ -1,0 +1,1873 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Система управления материальными и нематериальными поощрениями сотрудников">
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<title>Кафетерий льгот</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --ground:#EEF1F5; --surface:#FFFFFF; --surface-2:#F7F9FB; --raise:#FFFFFF;
+  --ink:#16202C; --ink-2:#374656; --muted:#63748A; --faint:#8694A6;
+  --line:#D6DDE6; --line-2:#E8EDF2;
+  --accent:#2B4ACB; --accent-ink:#1F3799; --accent-soft:#DFE5FB; --accent-tint:#F2F5FE;
+  --amber:#B06B00; --amber-soft:#FBEEDC;
+  --good:#1F7A46; --good-soft:#DFF1E6;
+  --warn:#9A6200; --warn-soft:#FBEDD7;
+  --crit:#B3261E; --crit-soft:#FBE4E2;
+  --info:#1C5D99; --info-soft:#E0EBF6;
+  --burn:#B06B00;
+  --nav-bg:#141B24; --nav-bg-2:#1C2733; --nav-ink:#A7B6C7; --nav-ink-2:#6E8198; --nav-on:#FFFFFF; --nav-line:#263340;
+  --shadow:none;
+  --shadow-lift:0 6px 20px rgba(16,26,38,.16);
+  --r:4px; --r-s:3px; --r-l:6px;
+  --sans:'IBM Plex Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#0D1218; --surface:#131B24; --surface-2:#18212C; --raise:#1C2733;
+    --ink:#E4EAF1; --ink-2:#BCC8D6; --muted:#8A99AB; --faint:#6B7B8E;
+    --line:#26323F; --line-2:#1E2831;
+    --accent:#6C86E8; --accent-ink:#90A5F0; --accent-soft:#1E2A4D; --accent-tint:#161F31;
+    --amber:#D79A42; --amber-soft:#2B2217;
+    --good:#54B37C; --good-soft:#15291D;
+    --warn:#C99137; --warn-soft:#2A2216;
+    --crit:#DC6E65; --crit-soft:#2C1B19;
+    --info:#5C9BD6; --info-soft:#152430;
+    --burn:#D79A42;
+    --nav-bg:#0A0F14; --nav-bg-2:#131B24; --nav-ink:#8A99AB; --nav-ink-2:#5E6E80; --nav-on:#FFFFFF; --nav-line:#1C2630;
+    --shadow-lift:0 6px 22px rgba(0,0,0,.5);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0D1218; --surface:#131B24; --surface-2:#18212C; --raise:#1C2733;
+  --ink:#E4EAF1; --ink-2:#BCC8D6; --muted:#8A99AB; --faint:#6B7B8E;
+  --line:#26323F; --line-2:#1E2831;
+  --accent:#6C86E8; --accent-ink:#90A5F0; --accent-soft:#1E2A4D; --accent-tint:#161F31;
+  --amber:#D79A42; --amber-soft:#2B2217;
+  --good:#54B37C; --good-soft:#15291D;
+  --warn:#C99137; --warn-soft:#2A2216;
+  --crit:#DC6E65; --crit-soft:#2C1B19;
+  --info:#5C9BD6; --info-soft:#152430;
+  --burn:#D79A42;
+  --nav-bg:#0A0F14; --nav-bg-2:#131B24; --nav-ink:#8A99AB; --nav-ink-2:#5E6E80; --nav-on:#FFFFFF; --nav-line:#1C2630;
+  --shadow-lift:0 6px 22px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:13px;line-height:1.45;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{margin:0;font-weight:600;letter-spacing:-.005em;text-wrap:balance}
+h1{font-size:19px;font-weight:600}
+h2{font-size:14px;font-weight:600}
+h3{font-size:13px}
+p{margin:0}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+a{color:var(--accent);text-decoration:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-family:var(--mono);font-size:.9em}
+
+/* ---------- каркас ---------- */
+.app{display:grid;grid-template-columns:230px 1fr;min-height:100vh}
+.side{background:var(--nav-bg);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
+.brand{padding:0 16px;height:48px;display:flex;gap:10px;align-items:center;border-bottom:1px solid var(--nav-line);flex:none}
+.brand-mk{width:26px;height:26px;border-radius:var(--r-s);background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px;flex:none}
+.brand-t{font-weight:600;font-size:13px;line-height:1.2;color:var(--nav-on)}
+.brand-s{font-size:10.5px;color:var(--nav-ink-2);font-weight:400}
+.nav{padding:8px 0;display:flex;flex-direction:column;flex:1}
+.nav-h{font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--nav-ink-2);padding:14px 16px 5px}
+.nav-i{display:flex;align-items:center;gap:9px;padding:6px 16px;color:var(--nav-ink);font-weight:400;cursor:pointer;border:0;background:0;width:100%;text-align:left;font-size:13px;border-left:2px solid transparent}
+.nav-i:hover{background:var(--nav-bg-2);color:var(--nav-on)}
+.nav-i.on{background:var(--nav-bg-2);color:var(--nav-on);border-left-color:var(--accent);font-weight:500}
+.nav-i .ic{width:16px;text-align:center;flex:none;opacity:.7;font-size:12px}
+.nav-i.on .ic{opacity:1}
+.nav-i .bdg{margin-left:auto;background:var(--accent);color:#fff;font-size:10px;font-weight:600;padding:0 5px;border-radius:2px;line-height:15px}
+.nav-i.lock{opacity:.32;cursor:not-allowed}
+.nav-i.lock:hover{background:0;color:var(--nav-ink)}
+
+.main{min-width:0;display:flex;flex-direction:column}
+.top{background:var(--surface);border-bottom:1px solid var(--line);padding:0 18px;height:48px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:20}
+.top-sp{flex:1}
+.wrap{padding:18px;max-width:1320px;width:100%}
+
+/* ---------- элементы ---------- */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+.card-p{padding:14px 16px}
+.sec{display:flex;flex-direction:column;gap:11px;margin-bottom:22px}
+.sec-h{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.sec-h .sub{color:var(--muted);font-size:12px}
+.grid{display:grid;gap:10px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(224px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(188px,1fr))}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.col{display:flex;flex-direction:column;gap:9px}
+
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--ink-2);padding:5px 11px;border-radius:var(--r-s);font-weight:500;cursor:pointer;font-size:12.5px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;line-height:1.4}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn-pri{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:500}
+.btn-pri:hover{background:var(--accent-ink);border-color:var(--accent-ink);color:#fff}
+.btn-dng{color:var(--crit)}
+.btn-dng:hover{background:var(--crit-soft);border-color:var(--crit);color:var(--crit)}
+.btn-s{padding:3px 8px;font-size:11.5px}
+.btn:disabled{opacity:.42;cursor:not-allowed}
+.btn:disabled:hover{background:var(--surface);border-color:var(--line);color:var(--ink-2)}
+.btn-pri:disabled:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+
+.tag{display:inline-flex;align-items:center;gap:4px;padding:1px 6px;border-radius:2px;font-size:11px;font-weight:500;background:var(--surface-2);color:var(--muted);border:1px solid var(--line-2);white-space:nowrap;line-height:1.5}
+.tag-a{background:var(--accent-soft);color:var(--accent-ink);border-color:transparent}
+.tag-g{background:var(--good-soft);color:var(--good);border-color:transparent}
+.tag-w{background:var(--warn-soft);color:var(--warn);border-color:transparent}
+.tag-c{background:var(--crit-soft);color:var(--crit);border-color:transparent}
+.tag-i{background:var(--info-soft);color:var(--info);border-color:transparent}
+.dot{width:5px;height:5px;border-radius:50%;background:currentColor;flex:none}
+
+label.f{display:flex;flex-direction:column;gap:4px;font-size:11.5px;font-weight:500;color:var(--muted)}
+.inp,select.inp,textarea.inp{border:1px solid var(--line);background:var(--surface);border-radius:var(--r-s);padding:5px 9px;font-weight:400;width:100%;font-size:13px;color:var(--ink)}
+.inp:focus{outline:0;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-tint)}
+textarea.inp{resize:vertical;min-height:58px}
+.hint{font-size:11.5px;color:var(--faint);font-weight:400}
+
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+.tbl-wrap table{min-width:600px}
+th{text-align:left;font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding:7px 11px;border-bottom:1px solid var(--line);background:var(--surface-2);white-space:nowrap;position:sticky;top:0}
+td{padding:7px 11px;border-bottom:1px solid var(--line-2);vertical-align:top}
+tbody tr:nth-child(even){background:var(--surface-2)}
+tbody tr:hover{background:var(--accent-tint)}
+tr:last-child td{border-bottom:0}
+td.r,th.r{text-align:right}
+
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:11px 13px;display:flex;flex-direction:column;gap:2px}
+.kpi-l{font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.kpi-v{font-size:23px;font-weight:600;letter-spacing:-.02em;line-height:1.15;font-variant-numeric:tabular-nums}
+.kpi-d{font-size:11.5px;color:var(--faint)}
+
+.bar{height:6px;background:var(--line-2);border-radius:2px;overflow:hidden;display:flex}
+.bar>i{display:block;height:100%}
+.bar .b-burn{background:var(--burn)}
+.bar .b-keep{background:var(--accent)}
+.bar .b-used{background:var(--faint)}
+
+.empty{padding:30px 18px;text-align:center;color:var(--faint);font-size:12.5px}
+.note{border:1px solid var(--line);border-left:3px solid var(--accent);background:var(--accent-tint);padding:9px 12px;border-radius:var(--r-s);font-size:12.5px;color:var(--ink-2)}
+.note-w{border-left-color:var(--warn);background:var(--warn-soft);border-color:var(--line-2)}
+.note-c{border-left-color:var(--crit);background:var(--crit-soft);border-color:var(--line-2)}
+
+/* витрина */
+.shelf{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(226px,1fr))}
+.item{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;display:flex;flex-direction:column;cursor:pointer;transition:border-color .1s}
+.item:hover{border-color:var(--accent)}
+.item-im{height:62px;background:var(--surface-2);display:grid;place-items:center;font-size:20px;color:var(--muted);border-bottom:1px solid var(--line-2)}
+.item-b{padding:9px 11px 11px;display:flex;flex-direction:column;gap:5px;flex:1}
+.item-t{font-weight:500;font-size:13px;line-height:1.3}
+.item-m{font-size:11px;color:var(--faint)}
+.item-f{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:7px;padding-top:4px;border-top:1px solid var(--line-2)}
+.price{font-weight:600;font-size:14px;font-variant-numeric:tabular-nums}
+.price small{font-weight:500;font-size:10.5px;color:var(--muted);margin-left:2px}
+
+/* модал */
+.ovl{position:fixed;inset:0;background:rgba(12,19,27,.55);z-index:100;display:grid;place-items:center;padding:20px}
+.modal{background:var(--surface);border-radius:var(--r-l);max-width:600px;width:100%;max-height:88vh;overflow-y:auto;box-shadow:var(--shadow-lift);border:1px solid var(--line)}
+.modal-h{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:11px;position:sticky;top:0;background:var(--surface);z-index:2}
+.modal-b{padding:16px}
+.modal-f{padding:11px 16px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;position:sticky;bottom:0;background:var(--surface)}
+.x{margin-left:auto;border:0;background:0;font-size:17px;cursor:pointer;color:var(--faint);line-height:1;padding:2px 4px}
+.x:hover{color:var(--ink)}
+
+.toast-wrap{position:fixed;bottom:16px;right:16px;z-index:200;display:flex;flex-direction:column;gap:7px;align-items:flex-end;pointer-events:none}
+.toast{background:var(--ink);color:var(--ground);padding:7px 13px;border-radius:var(--r-s);font-weight:500;font-size:12.5px;box-shadow:var(--shadow-lift);border-left:3px solid var(--accent)}
+.toast.err{background:var(--crit);color:#fff;border-left-color:#fff}
+
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--line);overflow-x:auto}
+.tab{border:0;background:0;padding:8px 14px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;font-size:12.5px;margin-bottom:-1px}
+.tab:hover{color:var(--ink)}
+.tab.on{color:var(--accent);border-bottom-color:var(--accent)}
+
+.sw{position:relative;display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-weight:400;font-size:12.5px}
+.sw input{position:absolute;opacity:0;pointer-events:none}
+.sw i{width:30px;height:17px;border-radius:9px;background:var(--line);position:relative;transition:background .12s;flex:none}
+.sw i:after{content:'';position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:#fff;transition:transform .12s}
+.sw input:checked + i{background:var(--accent)}
+.sw input:checked + i:after{transform:translateX(13px)}
+
+.chips{display:flex;gap:5px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--surface);padding:3px 9px;border-radius:var(--r-s);font-size:12px;font-weight:400;cursor:pointer;color:var(--ink-2)}
+.chip:hover{border-color:var(--accent);color:var(--accent)}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:500}
+
+.list{display:flex;flex-direction:column}
+.li{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--line-2)}
+.li:last-child{border-bottom:0}
+.li-ic{width:26px;height:26px;border-radius:var(--r-s);background:var(--surface-2);border:1px solid var(--line-2);display:grid;place-items:center;flex:none;font-size:12px;color:var(--muted)}
+.li-b{flex:1;min-width:0}
+.li-t{font-weight:500;font-size:13px}
+.li-s{font-size:11.5px;color:var(--muted)}
+.li-r{text-align:right;white-space:nowrap;font-weight:600;font-variant-numeric:tabular-nums}
+.plus{color:var(--good)}
+.minus{color:var(--ink-2)}
+
+.sparkwrap{display:flex;align-items:flex-end;gap:2px;height:42px}
+.sparkwrap i{flex:1;background:var(--accent-soft);min-height:2px}
+.sparkwrap i.hi{background:var(--accent)}
+
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:11px;font-weight:400;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{width:8px;height:8px;border-radius:1px;display:inline-block}
+
+.role-sel{display:flex;align-items:center;gap:8px;border-right:1px solid var(--line);padding-right:12px;height:28px}
+.role-sel .lbl{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);background:var(--surface-2);border:1px solid var(--line-2);padding:1px 6px;border-radius:2px}
+
+.bal-pill{display:flex;align-items:baseline;gap:6px;border:1px solid var(--line);border-radius:var(--r-s);padding:3px 10px;background:var(--surface-2)}
+.bal-pill .v{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--amber)}
+.bal-pill .u{font-size:11px;color:var(--muted)}
+
+.cart-btn{position:relative}
+.cart-btn .cnt{position:absolute;top:-6px;right:-6px;background:var(--crit);color:#fff;font-size:9.5px;font-weight:700;min-width:15px;height:15px;border-radius:8px;display:grid;place-items:center;padding:0 3px}
+
+.steps{display:flex;gap:0;align-items:stretch;flex-wrap:wrap}
+.step{flex:1;min-width:128px;padding:8px 12px;border:1px solid var(--line);border-right:0;background:var(--surface);font-size:12px;font-weight:500;color:var(--muted);display:flex;flex-direction:column;gap:1px}
+.step:first-child{border-radius:var(--r) 0 0 var(--r)}
+.step:last-child{border-right:1px solid var(--line);border-radius:0 var(--r) var(--r) 0}
+.step.done{background:var(--accent-tint);color:var(--accent-ink);border-color:var(--line)}
+.step.now{background:var(--accent);color:#fff;border-color:var(--accent)}
+.step b{font-size:10px;letter-spacing:.07em;text-transform:uppercase;opacity:.72;font-weight:600}
+
+.chartbox{position:relative;height:210px}
+.chartbox-s{position:relative;height:160px}
+
+/* экран входа */
+.auth{min-height:100vh;display:grid;grid-template-columns:minmax(0,1fr) 420px;background:var(--ground)}
+.auth-l{padding:40px 44px;display:flex;flex-direction:column;justify-content:center;gap:20px;max-width:540px;margin-left:auto;width:100%}
+.auth-r{background:var(--nav-bg);color:var(--nav-ink);padding:36px 30px;display:flex;flex-direction:column;justify-content:center;gap:14px;overflow-y:auto}
+.auth-r h2{color:var(--nav-on)}
+.auth-r .hint{color:var(--nav-ink-2)}
+.auth-r .note{background:transparent;border-color:var(--nav-line);border-left-color:var(--accent);color:var(--nav-ink)}
+.auth-r .note-w{border-left-color:var(--amber);background:transparent}
+.auth-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:22px 22px 20px}
+.acc{display:flex;gap:10px;align-items:center;padding:9px 11px;border:1px solid var(--nav-line);border-radius:var(--r-s);background:var(--nav-bg-2);cursor:pointer;text-align:left;width:100%;color:var(--nav-ink)}
+.acc:hover{border-color:var(--accent);background:#1E2A3A}
+.acc-av{width:28px;height:28px;border-radius:var(--r-s);background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:600;flex:none;font-size:12px}
+.acc-b{flex:1;min-width:0}
+.acc-t{font-weight:500;font-size:12.5px;color:var(--nav-on)}
+.acc-s{font-size:11px;color:var(--nav-ink-2);font-family:var(--mono)}
+.auth-l .acc{background:var(--surface);border-color:var(--line);color:var(--ink)}
+.auth-l .acc:hover{background:var(--accent-tint);border-color:var(--accent)}
+.auth-l .acc-t{color:var(--ink)}
+.auth-l .acc-s{color:var(--muted)}
+@media (max-width:980px){ .auth{grid-template-columns:1fr} .auth-l{padding:28px 18px;margin:0} }
+
+@media (max-width:900px){
+  .app{grid-template-columns:1fr}
+  .side{position:static;height:auto}
+  .nav{flex-direction:row;overflow-x:auto;padding:4px}
+  .nav-h{display:none}
+  .nav-i{border-left:0;border-bottom:2px solid transparent;white-space:nowrap}
+  .nav-i.on{border-left:0;border-bottom-color:var(--accent)}
+  .wrap{padding:14px 12px 40px}
+  .top{padding:0 12px}
+}
+</style>
+</head>
+<body>
+<div id="authRoot"></div>
+<div class="app" id="appRoot" hidden>
+  <aside class="side">
+    <div class="brand">
+      <div class="brand-mk">К</div>
+      <div>
+        <div class="brand-t">Кафетерий льгот</div>
+        <div class="brand-s">ГК «Стройальянс»</div>
+      </div>
+    </div>
+    <nav class="nav" id="nav"></nav>
+    <div style="padding:10px 14px;border-top:1px solid var(--nav-line);font-size:11px;color:var(--nav-ink-2)">
+      Демо-стенд · данные вымышленные<br>
+      <a href="/api/docs" target="_blank" style="color:var(--accent)">Документация API</a>
+    </div>
+  </aside>
+  <div class="main">
+    <header class="top">
+      <div class="role-sel" id="whoBox"></div>
+      <div class="top-sp"></div>
+      <div class="bal-pill" id="balPill"></div>
+      <button class="btn cart-btn" id="cartBtn" onclick="go('cart')">Корзина<span class="cnt" id="cartCnt" hidden>0</span></button>
+      <button class="btn btn-s" onclick="toggleTheme()" title="Сменить тему">◐</button>
+    </header>
+    <div class="wrap" id="view"></div>
+  </div>
+</div>
+<div class="toast-wrap" id="toasts"></div>
+<div id="modalRoot"></div>
+
+<script>
+/* ============================================================
+   Кафетерий льгот — клиентская часть.
+
+   Вся бизнес-логика живёт на сервере: расчёт баланса, лимиты,
+   приоритет списания, права ролей, валидация заказа. Клиент
+   отвечает за отображение и за передачу действий в API.
+   ============================================================ */
+
+const API = {
+  base: '',
+  token: null,
+
+  async call(path, {method = 'GET', body = null, form = null} = {}) {
+    const headers = {};
+    if (this.token) headers['Authorization'] = 'Bearer ' + this.token;
+    let payload = null;
+    if (body) { headers['Content-Type'] = 'application/json'; payload = JSON.stringify(body); }
+    if (form) payload = form;
+
+    const res = await fetch(this.base + path, {method, headers, body: payload});
+    if (res.status === 204) return null;
+
+    let data = null;
+    try { data = await res.json(); } catch (e) { data = null; }
+
+    if (!res.ok) {
+      const message = (data && data.detail) || `Ошибка ${res.status}`;
+      const err = new Error(typeof message === 'string' ? message : JSON.stringify(message));
+      err.status = res.status;
+      throw err;
+    }
+    return data;
+  },
+
+  get(p) { return this.call(p); },
+  post(p, body) { return this.call(p, {method: 'POST', body}); },
+  put(p, body) { return this.call(p, {method: 'PUT', body}); },
+  del(p) { return this.call(p, {method: 'DELETE'}); },
+};
+
+const TOKEN_KEY = 'cafeteria-token';
+const THEME_KEY = 'cafeteria-theme';
+
+/* ---------- состояние клиента ---------- */
+let ME = null;          // профиль, баланс, доступные разделы
+let CART = [];          // корзина живёт только в браузере до оформления
+let SCREEN = 'home';
+let TAB = null;
+let MOD = null;
+let CACHE = {};         // данные текущего экрана
+
+/* ---------- утилиты ---------- */
+const fmt = n => Number(n || 0).toLocaleString('ru-RU');
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const dt = d => d ? new Date(d).toLocaleDateString('ru-RU', {day:'2-digit', month:'2-digit', year:'numeric'}) : '—';
+const dtt = d => d ? new Date(d).toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit'}) : '—';
+
+function plural(n, a, b, c) {
+  const m = n % 100, k = n % 10;
+  if (m >= 11 && m <= 14) return c;
+  if (k === 1) return a;
+  if (k >= 2 && k <= 4) return b;
+  return c;
+}
+
+function toast(msg, isError) {
+  const wrap = document.getElementById('toasts');
+  const el = document.createElement('div');
+  el.className = 'toast' + (isError ? ' err' : '');
+  el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+function toggleTheme() {
+  const cur = document.documentElement.getAttribute('data-theme');
+  const next = cur === 'dark' ? 'light' : cur === 'light' ? 'dark'
+    : (matchMedia('(prefers-color-scheme: dark)').matches ? 'light' : 'dark');
+  document.documentElement.setAttribute('data-theme', next);
+  try { localStorage.setItem(THEME_KEY, next); } catch (e) {}
+  drawCharts();
+}
+
+const TYPE_LABEL = {
+  gift: 'Сертификат', card: 'Банковская карта', phys: 'Физический товар',
+  doc: 'С подтверждающими документами', dms: 'Расширение ДМС', 'dms-family': 'ДМС для семьи',
+  slot: 'По записи', stay: 'Проживание', edu: 'Обучение', vac: 'Дни отпуска',
+  flex: 'Нефинансовая льгота',
+};
+
+const STATUS = {
+  new: {t: 'Создан', c: 'tag-i'}, approve: {t: 'На согласовании', c: 'tag-w'},
+  work: {t: 'В обработке', c: 'tag-i'}, done: {t: 'Выполнен', c: 'tag-g'},
+  cancel: {t: 'Отменён', c: 'tag-c'},
+};
+</script>
+
+<script>
+/* ============================ ЭКРАН ВХОДА ============================ */
+
+let LG = {email: '', password: '', invite: '', tab: 'pass', error: null, accounts: []};
+
+async function renderAuth() {
+  const root = document.getElementById('authRoot');
+  const app = document.getElementById('appRoot');
+
+  if (ME) { root.hidden = true; root.innerHTML = ''; app.hidden = false; return; }
+  app.hidden = true; root.hidden = false;
+
+  if (!LG.accounts.length) {
+    try { LG.accounts = await API.get('/api/auth/demo-accounts'); } catch (e) { LG.accounts = []; }
+  }
+
+  let h = '<div class="auth"><div class="auth-l">';
+  h += '<div class="row" style="gap:11px">'
+    + '<div class="brand-mk" style="width:38px;height:38px;border-radius:6px;font-size:18px">К</div>'
+    + '<div><div style="font-weight:600;font-size:17px;line-height:1.2">Кафетерий льгот</div>'
+    + '<div class="hint">ГК «Стройальянс» · корпоративный портал поощрений</div></div></div>';
+
+  h += '<div class="auth-card">';
+  h += '<div class="tabs" style="margin-bottom:18px">'
+    + ['pass:Логин и пароль', 'sso:SSO', 'invite:Приглашение'].map(x => {
+        const [key, title] = x.split(':');
+        return `<button class="tab${LG.tab === key ? ' on' : ''}" onclick="LG.tab='${key}';LG.error=null;renderAuth()">${title}</button>`;
+      }).join('')
+    + '</div>';
+
+  if (LG.tab === 'pass') {
+    h += '<h1 style="font-size:20px;margin-bottom:5px">Вход в систему</h1>'
+      + '<div class="hint" style="margin-bottom:18px">Используйте корпоративную почту и пароль</div>'
+      + '<label class="f" style="margin-bottom:12px">Корпоративная почта'
+      + `<input class="inp" type="email" autocomplete="username" value="${esc(LG.email)}" oninput="LG.email=this.value" onkeydown="if(event.key==='Enter')doLogin()" placeholder="имя.фамилия@corp.example"></label>`
+      + '<label class="f" style="margin-bottom:14px">Пароль'
+      + `<input class="inp" type="password" autocomplete="current-password" value="${esc(LG.password)}" oninput="LG.password=this.value" onkeydown="if(event.key==='Enter')doLogin()" placeholder="••••••••"></label>`
+      + (LG.error ? `<div class="note note-c" style="margin-bottom:14px">${LG.error}</div>` : '')
+      + '<button class="btn btn-pri" style="width:100%;justify-content:center" onclick="doLogin()">Войти</button>'
+      + '<div class="hint" style="margin-top:12px;text-align:center">Проверка выполняется на сервере: роль и права приходят из API</div>';
+  }
+
+  if (LG.tab === 'sso') {
+    h += '<h1 style="font-size:20px;margin-bottom:5px">Единый вход</h1>'
+      + '<div class="hint" style="margin-bottom:18px">Авторизация через корпоративную службу каталога. Пароль в Системе не хранится.</div>'
+      + '<div class="col" style="gap:9px">'
+      + LG.accounts.map(a => `<button class="acc" onclick="ssoLogin('${a.email}')">`
+          + `<div class="acc-av">${esc(a.full_name[0])}</div>`
+          + `<div class="acc-b"><div class="acc-t">${esc(a.full_name)}</div><div class="acc-s">${esc(a.email)}</div></div>`
+          + `<span class="tag">${esc(a.role_title)}</span></button>`).join('')
+      + '</div>'
+      + (LG.error ? `<div class="note note-c" style="margin-top:14px">${LG.error}</div>` : '')
+      + '<div class="note" style="margin-top:14px">В демо-стенде шаг SSO имитируется выбором учётной записи. В рабочей системе выполняется редирект в службу единого входа заказчика.</div>';
+  }
+
+  if (LG.tab === 'invite') {
+    h += '<h1 style="font-size:20px;margin-bottom:5px">Вход по приглашению</h1>'
+      + '<div class="hint" style="margin-bottom:18px">Код направляется на корпоративную почту при включении сотрудника в программу</div>'
+      + '<label class="f" style="margin-bottom:12px">Корпоративная почта'
+      + `<input class="inp" value="${esc(LG.email)}" oninput="LG.email=this.value" placeholder="имя.фамилия@corp.example"></label>`
+      + '<label class="f" style="margin-bottom:14px">Код из письма'
+      + `<input class="inp mono" value="${esc(LG.invite)}" oninput="LG.invite=this.value" placeholder="KL-2026-XXXX"></label>`
+      + (LG.error ? `<div class="note note-c" style="margin-bottom:14px">${LG.error}</div>` : '')
+      + '<button class="btn btn-pri" style="width:100%;justify-content:center" onclick="doInvite()">Активировать доступ</button>'
+      + '<div class="hint" style="margin-top:12px">Действующий код для демонстрации: <b class="mono">KL-2026-7788</b></div>';
+  }
+
+  h += '</div>';
+  h += '<div class="hint">Демонстрационный стенд. Данные сотрудников, льгот и заказов вымышлены. '
+    + 'Бэкенд на FastAPI, база PostgreSQL, состояние хранится на сервере.</div>';
+  h += '</div>';
+
+  h += '<div class="auth-r">';
+  h += '<div><h2 style="margin-bottom:4px">Тестовые учётные записи</h2>'
+    + '<div class="hint">Нажмите на запись, чтобы подставить логин и пароль. Права проверяются на сервере.</div></div>';
+  h += '<div class="col" style="gap:9px">'
+    + LG.accounts.map(a => `<button class="acc" onclick="fillLogin('${a.email}','${a.password}')">`
+        + `<div class="acc-av">${esc(a.full_name[0])}</div>`
+        + `<div class="acc-b"><div class="acc-t">${esc(a.full_name)} <span class="tag" style="margin-left:4px">${esc(a.role_title)}</span></div>`
+        + `<div class="acc-s">${esc(a.email)} · ${esc(a.password)}</div>`
+        + `<div class="hint" style="margin-top:2px">${esc(a.hint)}</div></div></button>`).join('')
+    + '</div>';
+  h += '<div class="note note-w">Проверка разграничения доступа: под «Назарова Е. А.» раздел «Моё здоровье» исчезнет из витрины и из каталога; под «Орлов В. Н.» останется только раздел общих предложений; под «Соколова И. П.» Пульт откроется без настроек, журнала аудита и аномалий.</div>';
+  h += '<div class="hint">Попытка входа с почтой, которой нет в кадровом контуре, вернёт сообщение о рассинхронизации данных с 1С:ЗУП.</div>';
+  h += '</div></div>';
+
+  root.innerHTML = h;
+}
+
+function fillLogin(email, password) {
+  LG.email = email; LG.password = password; LG.tab = 'pass'; LG.error = null;
+  renderAuth(); toast('Данные подставлены, нажмите «Войти»');
+}
+
+async function afterLogin(token) {
+  API.token = token;
+  try { localStorage.setItem(TOKEN_KEY, token); } catch (e) {}
+  await loadMe();
+  SCREEN = (ME.pult && ME.pult.length) ? 'dash' : 'home';
+  await render();
+  toast('Вы вошли как ' + ME.user.full_name);
+}
+
+async function doLogin() {
+  if (!LG.email || !LG.password) { LG.error = 'Заполните почту и пароль'; return renderAuth(); }
+  try {
+    const r = await API.post('/api/auth/login-json', {email: LG.email.trim(), password: LG.password});
+    LG.error = null;
+    await afterLogin(r.access_token);
+  } catch (e) {
+    LG.error = esc(e.message) + (e.status === 404
+      ? '<div style="margin-top:9px"><button class="btn btn-s" onclick="toast(\'Обращение направлено в HR: запрошена синхронизация кадровых данных\')">Обратиться в HR</button></div>'
+      : '');
+    renderAuth();
+  }
+}
+
+async function ssoLogin(email) {
+  try {
+    const r = await API.post('/api/auth/sso/' + encodeURIComponent(email));
+    await afterLogin(r.access_token);
+  } catch (e) { LG.error = esc(e.message); renderAuth(); }
+}
+
+async function doInvite() {
+  try {
+    const r = await API.post('/api/auth/invite', {email: LG.email.trim(), code: LG.invite});
+    LG.error = null;
+    await afterLogin(r.access_token);
+    toast('Доступ активирован по приглашению');
+  } catch (e) { LG.error = esc(e.message); renderAuth(); }
+}
+
+async function loadMe() {
+  ME = await API.get('/api/me');
+}
+
+function logout() {
+  ME = null; API.token = null; CART = []; CACHE = {};
+  LG = {email: '', password: '', invite: '', tab: 'pass', error: null, accounts: LG.accounts};
+  try { localStorage.removeItem(TOKEN_KEY); } catch (e) {}
+  killCharts();
+  renderAuth();
+}
+</script>
+
+<script>
+/* ============================ НАВИГАЦИЯ ============================ */
+
+const NAV_SHOP = [
+  {g: 'Витрина'},
+  {id: 'home', t: 'Главная', ic: '⌂'},
+  {id: 'catalog', t: 'Каталог льгот', ic: '▦'},
+  {id: 'health', t: 'Моё здоровье', ic: '✚', section: 'health'},
+  {id: 'cart', t: 'Корзина выбора', ic: '▥'},
+  {g: 'Мои данные'},
+  {id: 'orders', t: 'Мои заказы', ic: '≡'},
+  {id: 'points', t: 'Баллы и история', ic: '◉'},
+  {id: 'transfer', t: 'Переводы', ic: '⇄'},
+  {id: 'charity', t: 'Благотворительность', ic: '♡'},
+  {g: 'Прочее'},
+  {id: 'news', t: 'Новости', ic: '▤'},
+  {id: 'survey', t: 'Опросы', ic: '◑'},
+  {id: 'support', t: 'Поддержка', ic: '◆'},
+];
+
+const NAV_PULT = [
+  {g: 'Пульт'},
+  {id: 'dash', t: 'Дашборд', ic: '▤', k: 'dash'},
+  {id: 'a-catalog', t: 'Каталог и витрина', ic: '▦', k: 'catalog'},
+  {id: 'a-budget', t: 'Бюджеты и лимиты', ic: '◫', k: 'budget'},
+  {id: 'a-points', t: 'Начисления', ic: '◉', k: 'points'},
+  {id: 'a-camp', t: 'Окна выбора', ic: '◷', k: 'campaigns'},
+  {id: 'a-orders', t: 'Заказы и согласования', ic: '≡', k: 'orders'},
+  {id: 'a-people', t: 'Сотрудники и роли', ic: '◌', k: 'people'},
+  {id: 'a-promo', t: 'Промокоды', ic: '▣', k: 'promo'},
+  {id: 'a-support', t: 'Обращения', ic: '◆', k: 'support'},
+  {g: 'Контроль'},
+  {id: 'a-export', t: 'Выгрузка в бухгалтерию', ic: '↧', k: 'export'},
+  {id: 'a-audit', t: 'Журнал аудита', ic: '▧', k: 'audit'},
+  {id: 'a-anom', t: 'Аномалии', ic: '⚠', k: 'anomalies'},
+  {id: 'a-set', t: 'Настройки платформы', ic: '⚙', k: 'settings'},
+];
+
+function pultAllows(key) {
+  const list = (ME && ME.pult) || [];
+  return list.includes('*') || list.includes(key);
+}
+
+function renderNav() {
+  let h = '';
+  NAV_SHOP.forEach(n => {
+    if (n.g) { h += `<div class="nav-h">${n.g}</div>`; return; }
+    if (n.section && !ME.sections.includes(n.section)) return;
+    if (ME.user.role === 'vip' && ['transfer', 'charity', 'health'].includes(n.id)) return;
+    const badge = n.id === 'cart' && CART.length ? `<span class="bdg">${CART.length}</span>` : '';
+    h += `<button class="nav-i${SCREEN === n.id ? ' on' : ''}" onclick="go('${n.id}')"><span class="ic">${n.ic}</span>${n.t}${badge}</button>`;
+  });
+
+  if (ME.pult && ME.pult.length) {
+    NAV_PULT.forEach(n => {
+      if (n.g) { h += `<div class="nav-h">${n.g}</div>`; return; }
+      const ok = pultAllows(n.k);
+      h += `<button class="nav-i${SCREEN === n.id ? ' on' : ''}${ok ? '' : ' lock'}" `
+        + (ok ? `onclick="go('${n.id}')"` : `title="Недоступно для роли «${esc(ME.user.role_title)}»" disabled`)
+        + `><span class="ic">${n.ic}</span>${n.t}</button>`;
+    });
+  }
+  document.getElementById('nav').innerHTML = h;
+}
+
+function topBar() {
+  document.getElementById('whoBox').innerHTML =
+    `<span class="lbl">${esc(ME.user.role_title)}</span>`
+    + `<span style="font-weight:600;font-size:12.5px;padding:3px 4px">${esc(ME.user.full_name)}</span>`
+    + '<button class="btn btn-s" onclick="logout()">Выйти</button>';
+
+  const b = ME.balance;
+  document.getElementById('balPill').innerHTML =
+    `<span class="v">${fmt(b.available)}</span><span class="u">баллов доступно</span>`
+    + (b.frozen ? ' <span class="tag tag-c">заморожено</span>' : '');
+
+  const cnt = document.getElementById('cartCnt');
+  cnt.hidden = CART.length === 0;
+  cnt.textContent = CART.length;
+  document.getElementById('cartBtn').style.display = ME.user.role === 'vip' ? 'none' : '';
+}
+
+async function go(screen) {
+  SCREEN = screen; TAB = null;
+  await render();
+  window.scrollTo({top: 0});
+}
+
+function pageHead(title, sub, right) {
+  return '<div class="sec-h" style="margin-bottom:16px">'
+    + `<div><h1>${title}</h1>${sub ? `<div class="sub" style="margin-top:3px">${sub}</div>` : ''}</div>`
+    + `<div style="margin-left:auto">${right || ''}</div></div>`;
+}
+
+function kpi(label, value, detail) {
+  return `<div class="kpi"><div class="kpi-l">${label}</div><div class="kpi-v">${value}</div><div class="kpi-d">${detail || ''}</div></div>`;
+}
+
+function srow(label, value, color) {
+  const c = color === 'crit' ? 'var(--crit)' : color === 'good' ? 'var(--good)' : 'var(--ink)';
+  return `<div class="row" style="justify-content:space-between"><span style="color:var(--muted)">${label}</span>`
+    + `<b class="num" style="color:${c}">${value}</b></div>`;
+}
+
+function money(p) {
+  return `<span class="price num">${fmt(p)}<small>Б</small></span>`;
+}
+
+function loading() {
+  return '<div class="card"><div class="empty">Загрузка…</div></div>';
+}
+</script>
+
+<script>
+/* ============================ ВИТРИНА ============================ */
+
+async function scrHome() {
+  const [campaign, news, orders] = await Promise.all([
+    API.get('/api/campaign').catch(() => null),
+    API.get('/api/news').catch(() => []),
+    API.get('/api/orders').catch(() => []),
+  ]);
+  const b = ME.balance, u = ME.user;
+
+  let h = '';
+  if (u.role !== 'employee' && u.role !== 'admin') {
+    h += `<div class="note note-w" style="margin-bottom:14px"><b>Роль «${esc(u.role_title)}»:</b> `
+      + (u.role === 'decree' ? 'раздел «Моё здоровье» скрыт из витрины и из каталога.'
+        : u.role === 'vip' ? 'доступен только раздел общих предложений, базовое начисление не производится.'
+        : u.role === 'hr' ? 'доступен Пульт администратора без настроек, аудита и аномалий.' : '')
+      + '</div>';
+  }
+
+  h += '<div class="sec"><div class="card card-p" style="display:flex;gap:18px;align-items:center;flex-wrap:wrap">'
+    + '<div style="flex:1;min-width:240px">'
+    + `<div class="kpi-l">Здравствуйте, ${esc(u.full_name.split(' ')[0])}</div>`
+    + `<h1 style="margin-top:5px">${b.spent > 0 ? 'Бюджет сформирован и распределяется' : 'Бюджет сформирован, льготы не выбраны'}</h1>`
+    + `<div class="sub" style="color:var(--muted);margin-top:5px">${esc(u.position)} · грейд ${esc(u.grade || '—')} · бюджет грейда ${fmt(u.budget)} баллов</div>`
+    + '</div><div class="row">'
+    + '<button class="btn btn-pri" onclick="go(\'catalog\')">Перейти в каталог</button>'
+    + '<button class="btn" onclick="go(\'points\')">История баллов</button>'
+    + '</div></div>';
+
+  if (campaign) {
+    h += campaign.window_open
+      ? `<div class="note"><b>${esc(campaign.title)}</b> открыто до ${dt(campaign.date_to)}. Распределите баллы до закрытия окна.</div>`
+      : `<div class="note ${campaign.mode === 'inform' ? 'note-w' : 'note-c'}"><b>${esc(campaign.title)}</b> — окно закрыто. `
+        + (campaign.mode === 'inform' ? 'Изменения разрешены, HR получит уведомление.' : 'Оформление и отмена заблокированы, требуется заявка в HR.') + '</div>';
+  }
+
+  h += '<div class="grid g4">'
+    + kpi('Доступно к расходованию', fmt(b.available), 'из них сгораемых ' + fmt(b.burnable))
+    + kpi('Израсходовано', fmt(b.spent), orders.filter(o => o.status !== 'cancel').length + ' ' + plural(orders.length, 'заказ', 'заказа', 'заказов'))
+    + kpi('Сгораемые баллы', fmt(b.burnable), 'списываются в первую очередь')
+    + kpi('Несгораемые', fmt(b.permanent), 'срок не ограничен')
+    + '</div>';
+
+  const used = b.granted ? Math.round(b.spent / b.granted * 100) : 0;
+  h += '<div class="card card-p"><div class="row" style="justify-content:space-between;margin-bottom:9px">'
+    + `<h2>Использование бюджета</h2><span class="hint">${used}% от начисленного</span></div>`
+    + '<div class="bar">'
+    + `<i class="b-used" style="width:${b.granted ? b.spent / b.granted * 100 : 0}%"></i>`
+    + `<i class="b-burn" style="width:${b.granted ? b.burnable / b.granted * 100 : 0}%"></i>`
+    + `<i class="b-keep" style="width:${b.granted ? b.permanent / b.granted * 100 : 0}%"></i>`
+    + '</div><div class="legend" style="margin-top:9px">'
+    + `<span><i style="background:var(--faint)"></i>израсходовано ${fmt(b.spent)}</span>`
+    + `<span><i style="background:var(--burn)"></i>сгораемые ${fmt(b.burnable)}</span>`
+    + `<span><i style="background:var(--accent)"></i>несгораемые ${fmt(b.permanent)}</span>`
+    + '</div></div></div>';
+
+  if (news.length) {
+    h += '<div class="sec"><div class="sec-h"><h2>Новости и объявления</h2></div><div class="card card-p"><div class="list">';
+    news.forEach(n => {
+      h += `<div class="li"><div class="li-ic">${n.pinned ? '★' : '▤'}</div><div class="li-b">`
+        + `<div class="li-t">${esc(n.title)}</div><div class="li-s">${esc(n.body)}</div>`
+        + `<div class="hint" style="margin-top:4px">${dtt(n.created_at)}${n.comments.length ? ' · комментариев: ' + n.comments.length : ''}</div>`
+        + '</div></div>';
+    });
+    h += '</div></div></div>';
+  }
+
+  const active = orders.filter(o => ['approve', 'work', 'new'].includes(o.status));
+  if (active.length) {
+    h += '<div class="sec"><div class="sec-h"><h2>Заказы в работе</h2></div>' + ordersTable(active, false) + '</div>';
+  }
+  return h;
+}
+
+/* ---------- каталог ---------- */
+
+let F = {q: '', section: 'all', type: 'all', max: ''};
+
+async function scrCatalog() {
+  const params = new URLSearchParams();
+  if (F.section !== 'all') params.set('section', F.section);
+  if (F.q) params.set('q', F.q);
+  if (F.type !== 'all') params.set('item_type', F.type);
+  if (F.max) params.set('max_price', F.max);
+
+  const [sections, items] = await Promise.all([
+    API.get('/api/sections'),
+    API.get('/api/catalog' + (params.toString() ? '?' + params : '')),
+  ]);
+  CACHE.items = items;
+
+  let h = pageHead('Каталог льгот',
+    `${sections.length} ${plural(sections.length, 'раздел', 'раздела', 'разделов')} · ${items.length} ${plural(items.length, 'позиция', 'позиции', 'позиций')} доступно вашей роли`);
+
+  h += '<div class="card card-p" style="margin-bottom:16px"><div class="row" style="gap:10px">'
+    + `<input class="inp" style="flex:1;min-width:190px" placeholder="Поиск по названию и описанию" value="${esc(F.q)}" oninput="F.q=this.value" onkeydown="if(event.key==='Enter')render()">`
+    + '<select class="inp" style="width:auto" onchange="F.type=this.value;render()"><option value="all">Все типы</option>'
+    + Object.entries(TYPE_LABEL).map(([k, v]) => `<option value="${k}"${F.type === k ? ' selected' : ''}>${v}</option>`).join('')
+    + '</select>'
+    + '<select class="inp" style="width:auto" onchange="F.max=this.value;render()"><option value="">Любая стоимость</option>'
+    + [3000, 5000, 8000, 12000].map(v => `<option value="${v}"${String(F.max) === String(v) ? ' selected' : ''}>до ${fmt(v)} Б</option>`).join('')
+    + '</select>'
+    + '<button class="btn btn-s" onclick="F={q:\'\',section:\'all\',type:\'all\',max:\'\'};render()">Сбросить</button>'
+    + '</div><div class="chips" style="margin-top:11px">'
+    + `<button class="chip${F.section === 'all' ? ' on' : ''}" onclick="F.section='all';render()">Все разделы</button>`
+    + sections.map(s => `<button class="chip${F.section === s.code ? ' on' : ''}" onclick="F.section='${s.code}';render()">${s.icon} ${esc(s.title)}</button>`).join('')
+    + '</div></div>';
+
+  if (!items.length) return h + '<div class="card"><div class="empty">Ничего не найдено. Измените параметры поиска.</div></div>';
+
+  sections.forEach(s => {
+    const group = items.filter(i => i.section_id === s.id);
+    if (!group.length) return;
+    const cats = [...new Set(group.map(i => i.category))];
+    h += `<div class="sec"><div class="sec-h"><h2>${s.icon} ${esc(s.title)}</h2>`
+      + `<span class="sub">${group.length} ${plural(group.length, 'позиция', 'позиции', 'позиций')} · ${cats.map(esc).join(' · ')}</span></div><div class="shelf">`;
+    group.forEach(it => {
+      const inCart = CART.find(c => c.item_id === it.id);
+      const low = it.available_stock !== null && it.available_stock <= it.low_at;
+      h += `<div class="item" onclick="openItem(${it.id})">`
+        + `<div class="item-im">${it.icon}</div><div class="item-b">`
+        + `<div class="item-t">${esc(it.title)}</div>`
+        + `<div class="item-m">${esc(it.category)} · ${esc(it.supplier)}</div>`
+        + '<div class="row" style="gap:5px">'
+        + `<span class="tag">${TYPE_LABEL[it.item_type] || it.item_type}</span>`
+        + (it.approvals ? '<span class="tag tag-i">согласование</span>' : '')
+        + (it.needs_doc ? '<span class="tag tag-w">по документам</span>' : '')
+        + '</div><div class="item-f">'
+        + (it.price ? money(it.price) : '<span class="tag tag-g">без списания</span>')
+        + (inCart ? '<span class="tag tag-a">в корзине</span>'
+          : it.blocked_reason ? '<span class="tag tag-c">недоступно</span>'
+          : low ? `<span class="tag tag-w">осталось ${it.available_stock}</span>`
+          : it.price > ME.balance.available ? '<span class="tag tag-w">не хватает</span>' : '')
+        + '</div></div></div>';
+    });
+    h += '</div></div>';
+  });
+  return h;
+}
+</script>
+
+<script>
+/* ---------- карточка позиции и корзина ---------- */
+
+function openItem(id) {
+  const item = (CACHE.items || []).find(i => i.id === id);
+  if (!item) return;
+  MOD = {kind: 'item', item, opts: {}};
+  renderModal();
+}
+
+function closeModal() { MOD = null; renderModal(); }
+
+function renderModal() {
+  const root = document.getElementById('modalRoot');
+  if (!MOD) { root.innerHTML = ''; return; }
+  let inner = '';
+  if (MOD.kind === 'item') inner = modItem();
+  else if (MOD.kind === 'ticket') inner = modTicket();
+  else if (MOD.kind === 'grant') inner = modGrant();
+  root.innerHTML = `<div class="ovl" onclick="if(event.target===this)closeModal()"><div class="modal">${inner}</div></div>`;
+}
+
+function familyPrice(bd) {
+  if (!bd) return 0;
+  const d = new Date(bd), today = new Date();
+  let age = today.getFullYear() - d.getFullYear();
+  const m = today.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < d.getDate())) age--;
+  if (age < 1 || age > 65) return 0;
+  return age < 18 ? 5200 : age < 45 ? 6800 : age < 60 ? 8900 : 11500;
+}
+
+function modItem() {
+  const it = MOD.item, o = MOD.opts, b = ME.balance;
+  const inCart = CART.find(c => c.item_id === it.id);
+
+  let price = it.price;
+  if (it.item_type === 'dms-family') price = familyPrice(o.bd);
+  if (it.item_type === 'vac') price = it.price * Number(o.days || 1);
+
+  // Подсказка о недостающих данных. Окончательная проверка — на сервере.
+  let need = null;
+  if (it.has_slots && !o.slot) need = 'выберите дату и время приёма';
+  else if (it.item_type === 'stay' && !o.from) need = 'укажите дату заезда';
+  else if (it.needs_doc && !o.doc) need = 'прикрепите подтверждающий документ';
+  else if (it.item_type === 'dms-family' && !(o.fio && o.bd && o.rel)) need = 'заполните данные застрахованного';
+
+  let h = `<div class="modal-h"><div class="li-ic" style="font-size:15px">${it.icon}</div>`
+    + `<div><h2>${esc(it.title)}</h2><div class="hint">${esc(it.category)} · ${esc(it.supplier)}</div></div>`
+    + '<button class="x" onclick="closeModal()">✕</button></div><div class="modal-b">';
+
+  h += '<div class="row" style="gap:6px;margin-bottom:13px">'
+    + `<span class="tag tag-a">${TYPE_LABEL[it.item_type] || it.item_type}</span>`
+    + (it.limit_count ? `<span class="tag">не более ${it.limit_count} за ${it.limit_period}</span>` : '')
+    + (it.approvals ? `<span class="tag tag-i">согласование: ${it.approvals.join(', ')}</span>` : '')
+    + (it.available_stock !== null ? `<span class="tag${it.available_stock <= it.low_at ? ' tag-w' : ''}">${it.seats !== null ? 'мест' : 'в наличии'}: ${it.available_stock}</span>` : '')
+    + '</div>';
+
+  h += `<p style="margin-bottom:11px">${esc(it.description)}</p>`;
+  h += `<div class="card card-p" style="background:var(--surface-2);margin-bottom:13px"><div class="hint" style="font-weight:600;margin-bottom:4px">Условия</div>${esc(it.conditions)}</div>`;
+  if (it.files) h += '<div class="row" style="margin-bottom:13px">' + it.files.map(f => `<span class="tag">▤ ${esc(f)}</span>`).join('') + '</div>';
+
+  if (it.has_slots) {
+    h += '<label class="f" style="margin-bottom:11px">Дата и время<select class="inp" onchange="MOD.opts.slot=this.value;renderModal()">'
+      + '<option value="">Выберите слот</option>'
+      + ['06.10, 11:00', '07.10, 18:00', '09.10, 15:30', '13.10, 10:00'].map(s => `<option${o.slot === s ? ' selected' : ''}>${s}</option>`).join('')
+      + '</select></label>';
+  }
+  if (it.item_type === 'stay') {
+    h += '<div class="grid g2" style="margin-bottom:11px">'
+      + `<label class="f">Дата заезда<input class="inp" type="date" value="${o.from || ''}" onchange="MOD.opts.from=this.value;renderModal()"></label>`
+      + `<label class="f">Ночей<input class="inp" type="number" min="2" max="14" value="${o.nights || 2}" onchange="MOD.opts.nights=this.value"></label></div>`;
+  }
+  if (it.item_type === 'vac') {
+    h += `<label class="f" style="margin-bottom:11px">Количество дней<input class="inp" type="number" min="1" max="3" value="${o.days || 1}" onchange="MOD.opts.days=this.value;renderModal()"></label>`;
+  }
+  if (it.needs_doc) {
+    h += '<label class="f" style="margin-bottom:11px">Подтверждающий документ<div class="card card-p" style="border-style:dashed;text-align:center;color:var(--muted)">'
+      + (o.doc ? `▤ ${esc(o.doc)} <button class="btn btn-s" onclick="MOD.opts.doc=null;renderModal()">убрать</button>`
+        : '<button class="btn btn-s" onclick="MOD.opts.doc=\'чек.pdf\';renderModal()">Прикрепить файл</button><div class="hint" style="margin-top:5px">PDF или изображение, до 10 МБ</div>')
+      + '</div></label>';
+  }
+  if (it.item_type === 'dms-family') {
+    const age = o.bd ? (() => { const d = new Date(o.bd), t = new Date(); let a = t.getFullYear() - d.getFullYear();
+      const m = t.getMonth() - d.getMonth(); if (m < 0 || (m === 0 && t.getDate() < d.getDate())) a--; return a; })() : null;
+    h += '<div class="grid g2" style="margin-bottom:9px">'
+      + `<label class="f">ФИО застрахованного<input class="inp" value="${esc(o.fio || '')}" oninput="MOD.opts.fio=this.value" onchange="renderModal()" placeholder="Иванова Мария Петровна"></label>`
+      + `<label class="f">Дата рождения<input class="inp" type="date" value="${o.bd || ''}" onchange="MOD.opts.bd=this.value;renderModal()"></label>`
+      + '<label class="f">Степень родства<select class="inp" onchange="MOD.opts.rel=this.value;renderModal()"><option value="">Выберите</option>'
+      + ['Супруг', 'Супруга', 'Сын', 'Дочь', 'Родитель'].map(r => `<option${o.rel === r ? ' selected' : ''}>${r}</option>`).join('')
+      + '</select></label>'
+      + '<label class="f">Пол<select class="inp" onchange="MOD.opts.sex=this.value">'
+      + ['М', 'Ж'].map(r => `<option${o.sex === r ? ' selected' : ''}>${r}</option>`).join('') + '</select></label></div>';
+    if (age !== null) {
+      h += (age < 1 || age > 65)
+        ? `<div class="note note-c" style="margin-bottom:11px">Возраст ${age} ${plural(age, 'год', 'года', 'лет')} вне условий программы (1–65). Доступна альтернатива: программа «Защита 65+», оформляется через HR.</div>`
+        : `<div class="note" style="margin-bottom:11px">Возраст ${age} ${plural(age, 'год', 'года', 'лет')}. Стоимость по возрастной группе: ${fmt(price)} баллов.</div>`;
+    }
+  }
+
+  h += '<div class="card card-p" style="background:var(--accent-tint);border-color:var(--line)">'
+    + srow('Стоимость', price ? fmt(price) + ' Б' : 'без списания баллов')
+    + srow('Доступно', fmt(b.available))
+    + srow('Останется', fmt(b.available - price), (b.available - price) < 0 ? 'crit' : 'good')
+    + '</div>';
+
+  if (it.blocked_reason) h += `<div class="note note-c" style="margin-top:12px">${esc(it.blocked_reason)}</div>`;
+  else if (need) h += `<div class="note note-w" style="margin-top:12px">Чтобы добавить позицию в корзину: ${need}.</div>`;
+  if (inCart) h += '<div class="note" style="margin-top:12px">Позиция уже в корзине. Баллы спишутся после подтверждения заказа.</div>';
+
+  h += '</div><div class="modal-f"><button class="btn" onclick="closeModal()">Закрыть</button>'
+    + (inCart
+      ? `<button class="btn btn-dng" onclick="rmCart(${it.id})">Убрать из корзины</button>`
+        + '<button class="btn btn-pri" onclick="closeModal();go(\'cart\')">Перейти в корзину</button>'
+      : `<button class="btn btn-pri" ${(it.blocked_reason || need) ? 'disabled' : `onclick="addCart(${it.id})"`}>Добавить в корзину</button>`)
+    + '</div>';
+  return h;
+}
+
+function addCart(id) {
+  const it = (CACHE.items || []).find(i => i.id === id);
+  CART.push({item_id: id, options: {...MOD.opts}, _title: it ? it.title : '', _icon: it ? it.icon : '',
+             _type: it ? it.item_type : '', _supplier: it ? it.supplier : '',
+             _price: it ? (it.item_type === 'dms-family' ? familyPrice(MOD.opts.bd)
+                          : it.item_type === 'vac' ? it.price * Number(MOD.opts.days || 1) : it.price) : 0,
+             _approvals: it ? it.approvals : null});
+  renderModal();
+  topBar(); renderNav();
+  toast('Добавлено в корзину выбора');
+}
+
+function rmCart(id) {
+  CART = CART.filter(c => c.item_id !== id);
+  renderModal(); topBar(); renderNav();
+  toast('Убрано из корзины');
+}
+
+async function scrCart() {
+  const campaign = await API.get('/api/campaign').catch(() => null);
+  const sum = CART.reduce((s, c) => s + c._price, 0);
+  const over = sum - ME.balance.available;
+  const blocked = campaign && !campaign.window_open && campaign.mode !== 'inform';
+
+  let h = pageHead('Корзина выбора', CART.length ? 'Позиции списываются после подтверждения заказа' : '');
+  if (!CART.length) {
+    return h + '<div class="card"><div class="empty">Корзина пуста.<br><button class="btn btn-pri" style="margin-top:12px" onclick="go(\'catalog\')">Перейти в каталог</button></div></div>';
+  }
+
+  h += '<div class="grid" style="grid-template-columns:minmax(0,1.55fr) minmax(258px,.85fr);gap:16px"><div class="col">';
+  CART.forEach((c, i) => {
+    const bits = [];
+    if (c.options.slot) bits.push('слот: ' + c.options.slot);
+    if (c.options.from) bits.push('заезд ' + dt(c.options.from) + ', ночей ' + (c.options.nights || 2));
+    if (c.options.days) bits.push('дней: ' + c.options.days);
+    if (c.options.doc) bits.push('документ: ' + c.options.doc);
+    if (c.options.fio) bits.push(c.options.rel + ': ' + c.options.fio);
+    h += '<div class="card card-p" style="display:flex;gap:13px;align-items:flex-start">'
+      + `<div class="li-ic" style="font-size:15px">${c._icon}</div><div style="flex:1;min-width:0">`
+      + '<div class="row" style="justify-content:space-between;gap:10px"><div>'
+      + `<div class="li-t">${esc(c._title)}</div><div class="li-s">${TYPE_LABEL[c._type] || ''} · ${esc(c._supplier)}</div></div>`
+      + money(c._price) + '</div>'
+      + (bits.length ? `<div class="hint" style="margin-top:5px">${esc(bits.join(' · '))}</div>` : '')
+      + (c._approvals ? `<div class="hint" style="margin-top:5px">После оформления: согласование ${c._approvals.join(' → ')}</div>` : '')
+      + '</div>'
+      + `<button class="btn btn-s btn-dng" onclick="CART.splice(${i},1);render();topBar();renderNav()">Отменить</button></div>`;
+  });
+
+  h += '</div><div class="col"><div class="card card-p" style="position:sticky;top:64px">'
+    + '<h2 style="margin-bottom:11px">К подтверждению</h2>'
+    + srow('Позиций', String(CART.length))
+    + srow('Итого к списанию', fmt(sum))
+    + srow('Доступно', fmt(ME.balance.available))
+    + '<div style="height:1px;background:var(--line);margin:9px 0"></div>'
+    + srow(over > 0 ? 'Превышение' : 'Останется', fmt(Math.abs(over)), over > 0 ? 'crit' : 'good')
+    + (over > 0 ? `<div class="note note-c" style="margin-top:11px">Превышение бюджета на ${fmt(over)} баллов. Уберите позицию или уменьшите набор.</div>` : '')
+    + (blocked ? '<div class="note note-c" style="margin-top:11px">Окно выбора закрыто, оформление заблокировано.</div>' : '')
+    + `<div class="hint" style="margin-top:11px">Списание: сначала сгораемые баллы (${fmt(ME.balance.burnable)}), затем несгораемые (${fmt(ME.balance.permanent)}).</div>`
+    + `<button class="btn btn-pri" style="width:100%;justify-content:center;margin-top:12px" ${(over > 0 || blocked) ? 'disabled' : 'onclick="checkout()"'}>Подтвердить заказ</button>`
+    + '</div></div></div>';
+  return h;
+}
+
+async function checkout() {
+  try {
+    const result = await API.post('/api/checkout', {
+      lines: CART.map(c => ({item_id: c.item_id, options: c.options})),
+    });
+    CART = [];
+    await loadMe();
+    await go('orders');
+    toast(`${result.orders.length} ${plural(result.orders.length, 'заказ оформлен', 'заказа оформлено', 'заказов оформлено')}, списано ${fmt(result.spent)} баллов`);
+  } catch (e) {
+    toast(e.message, true);
+  }
+}
+</script>
+
+<script>
+/* ---------- заказы, баллы, ДМС ---------- */
+
+function ordersTable(list, withActions) {
+  if (!list.length) return '<div class="card"><div class="empty">Заказов нет</div></div>';
+  let h = '<div class="tbl-wrap"><table><thead><tr><th>Заказ</th><th>Позиция</th><th class="r">Баллы</th><th>Дата</th><th>Статус</th>'
+    + (withActions ? '<th></th>' : '') + '</tr></thead><tbody>';
+  list.forEach(o => {
+    const canCancel = ['new', 'approve', 'work'].includes(o.status) && o.item_type !== 'gift';
+    const bits = [];
+    if (o.options) {
+      if (o.options.slot) bits.push('слот: ' + o.options.slot);
+      if (o.options.days) bits.push('дней: ' + o.options.days);
+      if (o.options.fio) bits.push(o.options.rel + ': ' + o.options.fio);
+    }
+    h += `<tr><td><span class="mono">${o.public_id}</span>`
+      + (o.code ? `<div class="hint mono" style="margin-top:3px">код ${o.code}</div>` : '')
+      + (o.note ? `<div class="hint" style="margin-top:3px">${esc(o.note)}</div>` : '')
+      + `</td><td><b>${esc(o.item_title)}</b><div class="hint">${TYPE_LABEL[o.item_type] || ''}</div>`
+      + (o.approvals_chain && o.approvals_chain.length
+        ? `<div class="hint" style="margin-top:3px">${o.approvals_chain.map(a => a.approver + ': ' + (a.result === true ? 'согласовано' : a.result === false ? 'отклонено' : 'ожидает')).join(' · ')}</div>` : '')
+      + (bits.length ? `<div class="hint">${esc(bits.join(' · '))}</div>` : '')
+      + `</td><td class="r num">${o.price ? fmt(o.price) : '—'}</td>`
+      + `<td class="num">${dtt(o.created_at)}</td>`
+      + `<td><span class="tag ${STATUS[o.status].c}">${STATUS[o.status].t}</span></td>`
+      + (withActions ? '<td class="r" style="white-space:nowrap">'
+        + (canCancel ? `<button class="btn btn-s btn-dng" onclick="cancelOrder(${o.id})">Отменить</button>`
+          : o.item_type === 'gift' && o.status === 'done' ? '<span class="hint">отмена невозможна</span>' : '')
+        + '</td>' : '')
+      + '</tr>';
+  });
+  return h + '</tbody></table></div>';
+}
+
+async function scrOrders() {
+  const orders = await API.get('/api/orders');
+  let h = pageHead('Мои заказы', `${orders.length} ${plural(orders.length, 'запись', 'записи', 'записей')}`);
+  h += ordersTable(orders, true);
+  h += '<div class="hint" style="margin-top:11px">Позиции с промокодами отмене не подлежат: код выдан и в ротацию не возвращается.</div>';
+  return h;
+}
+
+async function cancelOrder(id) {
+  try {
+    await API.post(`/api/orders/${id}/cancel`);
+    await loadMe();
+    await render();
+    toast('Заказ отменён, баллы возвращены');
+  } catch (e) { toast(e.message, true); }
+}
+
+async function scrPoints() {
+  const lots = await API.get('/api/me/points');
+  const b = ME.balance;
+  const today = new Date();
+
+  let h = pageHead('Баллы и история', 'Начисления, списания, сроки сгорания');
+  h += '<div class="grid g4" style="margin-bottom:18px">'
+    + kpi('Доступно', fmt(b.available), b.frozen ? 'баллы заморожены администратором' : 'к расходованию сейчас')
+    + kpi('Сгораемые', fmt(b.burnable), 'списываются в первую очередь')
+    + kpi('Несгораемые', fmt(b.permanent), 'срок не ограничен')
+    + kpi('Сгорело', fmt(b.burned), 'за всё время')
+    + '</div>';
+
+  CACHE.chartPoints = lots;
+  h += '<div class="card card-p" style="margin-bottom:18px"><h2 style="margin-bottom:11px">Начисления по месяцам</h2>'
+    + '<div class="chartbox"><canvas id="chPoints"></canvas></div></div>';
+
+  h += '<div class="sec"><div class="sec-h"><h2>Начисления и сроки</h2></div>'
+    + '<div class="tbl-wrap"><table><thead><tr><th>Основание</th><th>Тип</th><th class="r">Начислено</th><th class="r">Остаток</th><th>Дата</th><th>Сгорает</th></tr></thead><tbody>';
+  lots.forEach(l => {
+    const expired = l.burn_at && new Date(l.burn_at) <= today;
+    const soon = l.burn_at && !expired && (new Date(l.burn_at) - today) / 86400000 < 60;
+    h += `<tr><td><b>${esc(l.reason)}</b><div class="hint">${esc(l.granted_by)}</div></td>`
+      + `<td>${l.burnable ? '<span class="tag tag-w">сгораемые</span>' : '<span class="tag tag-a">несгораемые</span>'}</td>`
+      + `<td class="r num">${fmt(l.amount)}</td><td class="r num"><b>${fmt(expired ? 0 : l.remaining)}</b></td>`
+      + `<td class="num">${dt(l.granted_at)}</td>`
+      + `<td class="num">${l.burn_at ? (expired ? `<span class="tag tag-c">сгорело ${dt(l.burn_at)}</span>` : soon ? `<span class="tag tag-w">${dt(l.burn_at)}</span>` : dt(l.burn_at)) : '—'}</td></tr>`;
+  });
+  h += '</tbody></table></div>'
+    + '<div class="hint">Приоритет списания: сгораемые баллы с ближайшим сроком. Правило реализовано на сервере.</div></div>';
+  return h;
+}
+
+async function scrHealth() {
+  if (!ME.sections.includes('health')) {
+    return pageHead('Моё здоровье') + `<div class="card"><div class="empty">Раздел недоступен для роли «${esc(ME.user.role_title)}».</div></div>`;
+  }
+  const [dms, family, items] = await Promise.all([
+    API.get('/api/dms').catch(() => null),
+    API.get('/api/dms/family').catch(() => []),
+    API.get('/api/catalog?section=health'),
+  ]);
+  CACHE.items = items;
+
+  let h = pageHead('Моё здоровье', 'Полис, покрытие, расширения и подключение членов семьи');
+  if (dms) {
+    h += '<div class="grid" style="grid-template-columns:minmax(0,1.3fr) minmax(258px,1fr);gap:16px;margin-bottom:22px">';
+    h += '<div class="card card-p"><div class="row" style="justify-content:space-between;margin-bottom:11px"><h2>Полис ДМС</h2>'
+      + (dms.refused ? '<span class="tag tag-w">отказ от базового ДМС</span>' : `<span class="tag tag-g"><i class="dot"></i>${esc(dms.status)}</span>`) + '</div>';
+    if (dms.refused) {
+      h += '<div class="note note-w">Вы отказались от базового ДМС. Неиспользованные баллы остаются в вашем распоряжении.'
+        + '<div style="margin-top:9px"><button class="btn btn-s" onclick="dmsRefuse(false)">Вернуть базовый ДМС</button></div></div>';
+    } else {
+      h += srow('Программа', esc(dms.base_program)) + srow('Страховщик', 'СК «Ресо-Гарантия»') + srow('Действует до', dt(dms.policy_to))
+        + '<div style="height:1px;background:var(--line);margin:11px 0"></div>'
+        + '<div class="grid g2"><div><div class="hint" style="font-weight:600;margin-bottom:5px">Что входит</div>'
+        + ['Поликлиническая помощь', 'Вызов врача на дом', 'Телемедицина 24/7', 'Экстренный стационар'].map(x => `<div class="li-s">✓ ${x}</div>`).join('')
+        + '</div><div><div class="hint" style="font-weight:600;margin-bottom:5px">Что не входит</div>'
+        + ['Стоматология (расширение)', 'Плановая госпитализация', 'Углублённый чек-ап', 'Санаторное лечение'].map(x => `<div class="li-s" style="color:var(--faint)">— ${x}</div>`).join('')
+        + '</div></div><div class="row" style="margin-top:13px">'
+        + '<button class="btn btn-s" onclick="toast(\'Сеть клиник: 42 клиники в 9 городах\')">Список клиник</button>'
+        + '<button class="btn btn-s btn-dng" onclick="dmsRefuse(true)">Отказаться от базового ДМС</button></div>';
+    }
+    h += '</div>';
+
+    const ext = dms.extensions || [];
+    h += '<div class="card card-p"><h2 style="margin-bottom:11px">Действующие расширения</h2>'
+      + (ext.length ? '<div class="list">' + ext.map(id => {
+          const it = items.find(i => i.id === id);
+          return it ? `<div class="li"><div class="li-ic">✚</div><div class="li-b"><div class="li-t">${esc(it.title)}</div><div class="li-s">до ${dt(dms.policy_to)}</div></div><div class="li-r num">${fmt(it.price)}</div></div>` : '';
+        }).join('') + '</div>'
+        : '<div class="empty" style="padding:18px 0">Расширений не подключено</div>')
+      + '</div></div>';
+  }
+
+  const exts = items.filter(i => i.item_type === 'dms');
+  h += '<div class="sec"><div class="sec-h"><h2>Расширить пакет за доплату</h2>'
+    + `<span class="sub">доступно ${fmt(ME.balance.available)} баллов</span></div><div class="shelf">`;
+  exts.forEach(it => {
+    const on = (dms && (dms.extensions || []).includes(it.id));
+    h += `<div class="item" onclick="${on ? "toast('Расширение уже подключено')" : `openItem(${it.id})`}">`
+      + `<div class="item-im">${it.icon}</div><div class="item-b"><div class="item-t">${esc(it.title)}</div>`
+      + `<div class="item-m">${esc(it.supplier)}</div><div class="item-f">${money(it.price)}`
+      + (on ? '<span class="tag tag-g">подключено</span>' : '') + '</div></div></div>';
+  });
+  h += '</div></div>';
+
+  const famItem = items.find(i => i.item_type === 'dms-family');
+  h += '<div class="sec"><div class="sec-h"><h2>Члены семьи</h2>'
+    + (famItem ? `<button class="btn btn-s" style="margin-left:auto" onclick="openItem(${famItem.id})">Подключить члена семьи</button>` : '') + '</div>';
+  h += family.length
+    ? '<div class="tbl-wrap"><table><thead><tr><th>ФИО</th><th>Родство</th><th>Дата рождения</th><th class="r">Стоимость</th><th>Статус</th></tr></thead><tbody>'
+      + family.map(f => `<tr><td><b>${esc(f.full_name)}</b></td><td>${esc(f.relation)}</td><td class="num">${dt(f.birth_date)}</td>`
+        + `<td class="r num">${fmt(f.price)}</td><td><span class="tag tag-i">${esc(f.status)}</span></td></tr>`).join('')
+      + '</tbody></table></div>'
+    : '<div class="card"><div class="empty">Члены семьи не подключены. Возраст застрахованного от 1 до 65 лет, стоимость зависит от возрастной группы.</div></div>';
+  h += '</div>';
+  return h;
+}
+
+async function dmsRefuse(value) {
+  try {
+    await API.post(`/api/dms/refuse?value=${value}`);
+    await render();
+    toast(value ? 'Отказ оформлен, баллы остаются доступными' : 'Базовый ДМС восстановлен');
+  } catch (e) { toast(e.message, true); }
+}
+</script>
+
+<script>
+/* ---------- переводы, благотворительность, коммуникации ---------- */
+
+let TR = {to: '', amount: ''};
+let CH = {fund: '', amount: ''};
+const FUNDS = [
+  {t: 'Фонд «Дом с маяком»', d: 'Помощь детям с тяжёлыми заболеваниями'},
+  {t: 'Фонд «Старость в радость»', d: 'Поддержка домов престарелых'},
+  {t: 'Фонд «Вера»', d: 'Паллиативная помощь взрослым и детям'},
+];
+
+async function scrTransfer() {
+  const colleagues = await API.get('/api/colleagues');
+  const amount = Number(TR.amount || 0);
+  const fee = Math.round(amount * 25 / 100);
+
+  let h = pageHead('Переводы баллов', 'Комиссия и минимальная сумма задаются в настройках платформы');
+  h += '<div class="grid" style="grid-template-columns:minmax(0,1fr) minmax(258px,.8fr);gap:16px">';
+  h += '<div class="card card-p"><h2 style="margin-bottom:13px">Перевод сотруднику</h2>'
+    + '<label class="f" style="margin-bottom:11px">Получатель<select class="inp" onchange="TR.to=this.value;render()">'
+    + '<option value="">Выберите сотрудника</option>'
+    + colleagues.map(c => `<option value="${c.id}"${String(TR.to) === String(c.id) ? ' selected' : ''}>${esc(c.full_name)} · ${esc(c.department)}</option>`).join('')
+    + '</select></label>'
+    + `<label class="f" style="margin-bottom:11px">Сумма в баллах<input class="inp" type="number" min="0" step="100" value="${esc(TR.amount)}" oninput="TR.amount=this.value" onchange="render()" placeholder="например, 1000"></label>`
+    + (amount ? '<div class="card card-p" style="background:var(--surface-2)">'
+        + srow('Списывается с вас', fmt(amount)) + srow('Комиссия 25%', '−' + fmt(fee))
+        + srow('Получит сотрудник', fmt(amount - fee), 'good') + '</div>' : '')
+    + `<button class="btn btn-pri" style="margin-top:13px" ${(!amount || !TR.to) ? 'disabled' : 'onclick="doTransfer()"'}>Перевести</button>`
+    + '</div>';
+  h += '<div class="card card-p"><h2 style="margin-bottom:9px">Как это работает</h2>'
+    + '<div class="hint">Комиссия удерживается при переводе, ставка настраивается администратором в разделе «Настройки платформы». '
+    + 'Проверка минимальной суммы и достаточности баллов выполняется на сервере.</div></div>';
+  h += '</div>';
+  return h;
+}
+
+async function doTransfer() {
+  try {
+    const r = await API.post('/api/transfer', {to_user_id: Number(TR.to), amount: Number(TR.amount)});
+    TR = {to: '', amount: ''};
+    await loadMe(); await render();
+    toast(`Перевод выполнен: получено ${fmt(r.received)}, комиссия ${fmt(r.fee)}`);
+  } catch (e) { toast(e.message, true); }
+}
+
+async function scrCharity() {
+  const amount = Number(CH.amount || 0);
+  let h = pageHead('Благотворительность', 'Компания софинансирует донат, множитель задаётся в настройках');
+  h += '<div class="grid" style="grid-template-columns:minmax(0,1fr) minmax(258px,.8fr);gap:16px"><div class="col">';
+  FUNDS.forEach(f => {
+    h += `<div class="card card-p" style="display:flex;gap:12px;align-items:center;${CH.fund === f.t ? 'border-color:var(--accent)' : ''}" onclick="CH.fund='${f.t}';render()">`
+      + '<div class="li-ic" style="background:var(--crit-soft);color:var(--crit)">♡</div>'
+      + `<div style="flex:1"><div class="li-t">${esc(f.t)}</div><div class="li-s">${esc(f.d)}</div></div>`
+      + (CH.fund === f.t ? '<span class="tag tag-a">выбран</span>' : '<button class="btn btn-s">Выбрать</button>') + '</div>';
+  });
+  h += '</div><div class="card card-p" style="align-self:start"><h2 style="margin-bottom:11px">Сумма доната</h2>'
+    + '<div class="chips" style="margin-bottom:11px">'
+    + [500, 1000, 2500].map(v => `<button class="chip${String(CH.amount) === String(v) ? ' on' : ''}" onclick="CH.amount=${v};render()">${fmt(v)}</button>`).join('')
+    + `<button class="chip" onclick="CH.amount=${ME.balance.available};render()">весь баланс</button></div>`
+    + `<input class="inp" type="number" min="0" step="100" value="${esc(CH.amount)}" oninput="CH.amount=this.value" onchange="render()" placeholder="Своя сумма">`
+    + (amount ? '<div class="card card-p" style="background:var(--surface-2);margin-top:11px">'
+        + srow('Ваш донат', fmt(amount)) + srow('Софинансирование', '+' + fmt(amount))
+        + srow('Фонд получит', fmt(amount * 2), 'good') + '</div>' : '')
+    + `<button class="btn btn-pri" style="width:100%;justify-content:center;margin-top:12px" ${(!amount || !CH.fund) ? 'disabled' : 'onclick="doCharity()"'}>Перевести в фонд</button>`
+    + '</div></div>';
+  return h;
+}
+
+async function doCharity() {
+  try {
+    const r = await API.post('/api/charity', {fund: CH.fund, amount: Number(CH.amount)});
+    CH = {fund: '', amount: ''};
+    await loadMe(); await render();
+    toast(`Донат отправлен, сертификат ${r.certificate}`);
+  } catch (e) { toast(e.message, true); }
+}
+
+async function scrNews() {
+  const news = await API.get('/api/news');
+  let h = pageHead('Новости и объявления');
+  news.forEach(n => {
+    h += '<div class="card card-p" style="margin-bottom:13px">'
+      + `<div class="row" style="justify-content:space-between"><h2>${n.pinned ? '★ ' : ''}${esc(n.title)}</h2><span class="hint">${dtt(n.created_at)}</span></div>`
+      + `<p style="margin-top:7px">${esc(n.body)}</p>`
+      + '<div style="margin-top:12px;border-top:1px solid var(--line-2);padding-top:11px">'
+      + `<div class="hint" style="font-weight:600;margin-bottom:7px">Комментарии (${n.comments.length})</div>`
+      + n.comments.map(c => `<div class="li" style="padding:7px 0"><div class="li-ic">${esc(c.author[0])}</div><div class="li-b"><div class="li-t">${esc(c.author)}</div><div class="li-s">${esc(c.body)}</div></div></div>`).join('')
+      + `<div class="row" style="margin-top:9px"><input class="inp" style="flex:1" id="cm-${n.id}" placeholder="Написать комментарий">`
+      + `<button class="btn btn-s" onclick="addComment(${n.id})">Отправить</button></div>`
+      + '<div class="hint" style="margin-top:6px">Комментарии проходят модерацию HR.</div></div></div>';
+  });
+  return h;
+}
+
+async function addComment(id) {
+  const el = document.getElementById('cm-' + id);
+  if (!el.value.trim()) return toast('Введите текст', true);
+  try {
+    await API.post(`/api/news/${id}/comment`, {body: el.value.trim()});
+    el.value = '';
+    toast('Комментарий отправлен на модерацию');
+  } catch (e) { toast(e.message, true); }
+}
+
+async function scrSurvey() {
+  const surveys = await API.get('/api/surveys');
+  let h = pageHead('Опросы');
+  surveys.forEach(s => {
+    const total = s.votes.reduce((a, b) => a + b, 0);
+    h += `<div class="card card-p" style="margin-bottom:13px"><h2>${esc(s.title)}</h2>`
+      + `<div class="hint" style="margin:5px 0 13px">${esc(s.question)} · проголосовало ${total}</div>`;
+    s.options.forEach((o, i) => {
+      const pct = total ? Math.round(s.votes[i] / total * 100) : 0;
+      h += '<div style="margin-bottom:10px"><div class="row" style="justify-content:space-between">'
+        + `<span style="font-weight:500">${esc(o)}</span><span class="hint num">${pct}% · ${s.votes[i]}</span></div>`
+        + `<div class="bar" style="margin-top:5px"><i class="${s.my_vote === i ? 'b-keep' : 'b-used'}" style="width:${pct}%"></i></div>`
+        + (s.my_vote === null ? `<button class="btn btn-s" style="margin-top:6px" onclick="vote(${s.id},${i})">Выбрать</button>` : '')
+        + '</div>';
+    });
+    if (s.my_vote !== null) h += `<div class="note" style="margin-top:9px">Ваш голос учтён: «${esc(s.options[s.my_vote])}».</div>`;
+    h += '</div>';
+  });
+  return h;
+}
+
+async function vote(id, choice) {
+  try { await API.post(`/api/surveys/${id}/vote?choice=${choice}`); await render(); toast('Голос учтён'); }
+  catch (e) { toast(e.message, true); }
+}
+
+async function scrSupport() {
+  const tickets = await API.get('/api/tickets');
+  let h = pageHead('Поддержка', 'Срок ответа задаётся в настройках платформы',
+    '<button class="btn btn-pri" onclick="MOD={kind:\'ticket\',topic:\'\',body:\'\'};renderModal()">Создать обращение</button>');
+  h += tickets.length
+    ? '<div class="tbl-wrap"><table><thead><tr><th>Номер</th><th>Тема</th><th>Дата</th><th>Статус</th><th>Ответ</th></tr></thead><tbody>'
+      + tickets.map(t => `<tr><td class="mono">${t.public_id}</td><td><b>${esc(t.topic)}</b><div class="hint">${esc(t.body)}</div></td>`
+        + `<td class="num">${dtt(t.created_at)}</td><td><span class="tag ${t.status === 'open' ? 'tag-w' : 'tag-g'}">${t.status === 'open' ? 'В работе' : 'Закрыто'}</span></td>`
+        + `<td>${t.answer ? esc(t.answer) : '<span class="hint">ожидается</span>'}</td></tr>`).join('')
+      + '</tbody></table></div>'
+    : '<div class="card"><div class="empty">Обращений нет</div></div>';
+  return h;
+}
+
+function modTicket() {
+  return '<div class="modal-h"><h2>Новое обращение</h2><button class="x" onclick="closeModal()">✕</button></div><div class="modal-b">'
+    + '<label class="f" style="margin-bottom:11px">Тема<select class="inp" onchange="MOD.topic=this.value">'
+    + '<option value="">Выберите тему</option>'
+    + ['Сертификат не пришёл', 'Вопрос по баллам', 'Вопрос по ДМС', 'Проблема с заказом', 'Вопрос по лимитам', 'Другое']
+        .map(t => `<option${MOD.topic === t ? ' selected' : ''}>${t}</option>`).join('')
+    + '</select></label>'
+    + `<label class="f">Описание<textarea class="inp" oninput="MOD.body=this.value" placeholder="Опишите проблему">${esc(MOD.body || '')}</textarea></label>`
+    + '</div><div class="modal-f"><button class="btn" onclick="closeModal()">Отмена</button>'
+    + '<button class="btn btn-pri" onclick="createTicket()">Отправить</button></div>';
+}
+
+async function createTicket() {
+  if (!MOD.topic || !MOD.body) return toast('Заполните тему и описание', true);
+  try {
+    const t = await API.post('/api/tickets', {topic: MOD.topic, body: MOD.body});
+    closeModal(); await render();
+    toast(`Обращение ${t.public_id} зарегистрировано`);
+  } catch (e) { toast(e.message, true); }
+}
+</script>
+
+<script>
+/* ============================ ПУЛЬТ ============================ */
+
+async function scrDash() {
+  const d = await API.get('/api/pult/dashboard');
+  CACHE.dash = d;
+
+  let h = pageHead('Дашборд эффективности', `Роль «${esc(ME.user.role_title)}»`,
+    '<button class="btn" onclick="go(\'a-export\')">Выгрузить отчёт</button>');
+  h += `<div class="note note-w" style="margin-bottom:16px">${esc(d.data_note)}</div>`;
+
+  h += '<div class="grid g4" style="margin-bottom:18px">'
+    + kpi('Использование бюджета', d.usage_pct + '%', `${fmt(d.totals.spent)} из ${fmt(d.totals.granted)} баллов`)
+    + kpi('Неиспользованный остаток', fmt(d.totals.left), `по ${d.people_total} сотрудникам`)
+    + kpi('Заказов в системе', String(d.orders_total), `${d.orders_pending} ожидают согласования`)
+    + kpi('Требует действия', String(d.needs_action.length), 'открытых задач')
+    + '</div>';
+
+  h += '<div class="grid" style="grid-template-columns:minmax(0,1.25fr) minmax(258px,1fr);gap:16px;margin-bottom:18px">'
+    + '<div class="card card-p"><h2 style="margin-bottom:11px">Использование бюджета по подразделениям</h2>'
+    + '<div class="chartbox"><canvas id="chDept"></canvas></div>'
+    + '<div class="legend" style="margin-top:10px"><span><i style="background:var(--accent)"></i>израсходовано</span>'
+    + '<span><i style="background:var(--line)"></i>остаток бюджета</span></div></div>'
+    + '<div class="card card-p"><h2 style="margin-bottom:11px">Популярные льготы</h2><div class="list">'
+    + (d.popular.length ? d.popular.map((p, i) => `<div class="li"><div class="li-ic">${i + 1}</div>`
+        + `<div class="li-b"><div class="li-t">${esc(p.title)}</div></div><div class="li-r num">${p.count}</div></div>`).join('')
+      : '<div class="empty" style="padding:16px 0">Заказов пока нет</div>')
+    + '</div></div></div>';
+
+  h += '<div class="grid g2" style="margin-bottom:18px">'
+    + '<div class="card card-p"><h2 style="margin-bottom:11px">Структура начисленных баллов</h2>'
+    + '<div class="chartbox-s"><canvas id="chMix"></canvas></div></div>'
+    + '<div class="card card-p"><h2 style="margin-bottom:11px">Заказы по месяцам</h2>'
+    + '<div class="chartbox-s"><canvas id="chMonth"></canvas></div></div></div>';
+
+  h += '<div class="sec"><div class="sec-h"><h2>Требует действия</h2></div><div class="card card-p"><div class="list">'
+    + (d.needs_action.length
+      ? d.needs_action.map(n => `<div class="li"><div class="li-ic" style="background:var(--warn-soft);color:var(--warn)">!</div>`
+          + `<div class="li-b"><div class="li-t">${esc(n.title)}</div><div class="li-s">${esc(n.detail)}</div></div>`
+          + `<button class="btn btn-s" onclick="go('${n.type === 'order' ? 'a-orders' : n.type === 'ticket' ? 'a-support' : n.type === 'anomaly' ? 'a-anom' : 'a-budget'}')">Открыть</button></div>`).join('')
+      : '<div class="empty">Открытых задач нет</div>')
+    + '</div></div></div>';
+  return h;
+}
+
+async function scrACatalog() {
+  const items = await API.get('/api/pult/catalog');
+  let h = pageHead('Каталог и витрина', `${items.length} позиций`);
+  h += '<div class="tbl-wrap"><table><thead><tr><th>Позиция</th><th>Тип</th><th class="r">Цена</th><th>Лимит</th><th>Остаток</th><th></th></tr></thead><tbody>';
+  items.forEach(it => {
+    h += `<tr${it.archived ? ' style="opacity:.55"' : ''}><td><b>${esc(it.title)}</b><div class="hint">${esc(it.category)} · ${esc(it.supplier)}</div></td>`
+      + `<td><span class="tag">${TYPE_LABEL[it.item_type] || it.item_type}</span></td>`
+      + `<td class="r num">${it.price ? fmt(it.price) : '—'}</td>`
+      + `<td class="hint">${it.limit_count ? it.limit_count + ' / ' + it.limit_period : '—'}${it.cap_amount ? '<br>предел ' + fmt(it.cap_amount) : ''}</td>`
+      + `<td class="num">${it.available_stock !== null ? (it.available_stock <= it.low_at ? `<span class="tag tag-w">${it.available_stock}</span>` : it.available_stock) : '—'}</td>`
+      + '<td class="r" style="white-space:nowrap">'
+      + `<button class="btn btn-s" onclick="archiveItem(${it.id},${!it.archived})">${it.archived ? 'Вернуть' : 'В архив'}</button> `
+      + `<button class="btn btn-s btn-dng" onclick="deleteItem(${it.id})">Удалить</button></td></tr>`;
+  });
+  h += '</tbody></table></div>'
+    + '<div class="hint" style="margin-top:10px">Архивация скрывает позицию из витрины, сохраняя её в прежних заказах. Удаление позиции с активными заказами блокируется сервером.</div>';
+  return h;
+}
+
+async function archiveItem(id, value) {
+  try { await API.post(`/api/pult/catalog/${id}/archive?value=${value}`); await render(); toast(value ? 'Позиция убрана из витрины' : 'Позиция возвращена'); }
+  catch (e) { toast(e.message, true); }
+}
+
+async function deleteItem(id) {
+  try { await API.del(`/api/pult/catalog/${id}`); await render(); toast('Позиция удалена'); }
+  catch (e) { toast(e.message, true); }
+}
+
+let BPrev = null;
+
+async function scrABudget() {
+  const d = await API.get('/api/pult/budgets');
+  let h = pageHead('Бюджеты и лимиты', 'Модель по грейдам и массовый пересчёт');
+  h += '<div class="card card-p" style="margin-bottom:14px"><h2 style="margin-bottom:11px">Сумма баллов по грейду</h2><div class="grid g4">'
+    + Object.entries(d.grades).map(([g, v]) => `<label class="f">${g}<input class="inp" type="number" value="${v}" disabled></label>`).join('')
+    + '</div><div class="hint" style="margin-top:11px">Периодичность начисления: один раз в год, единой датой. ВИП и сотрудники в декрете исключены из базового начисления.</div>'
+    + '<div class="row" style="margin-top:13px"><button class="btn btn-pri" onclick="previewBudget()">Рассчитать предпросмотр</button></div></div>';
+
+  if (BPrev) {
+    h += '<div class="tbl-wrap" style="margin-bottom:13px"><table><thead><tr><th>Сотрудник</th><th>Грейд</th><th class="r">Было</th><th class="r">Станет</th><th>Изменение</th></tr></thead><tbody>'
+      + BPrev.rows.map(r => `<tr><td>${esc(r.full_name)}</td><td>${r.grade}</td><td class="r num">${fmt(r.was)}</td><td class="r num"><b>${fmt(r.will)}</b></td>`
+        + `<td>${r.will > r.was ? `<span class="tag tag-g">+${fmt(r.will - r.was)}</span>` : r.will < r.was ? `<span class="tag tag-c">−${fmt(r.was - r.will)}</span>` : '<span class="hint">без изменений</span>'}</td></tr>`).join('')
+      + '</tbody></table></div>';
+    if (BPrev.excluded.length) {
+      h += `<div class="note note-c" style="margin-bottom:13px"><b>Список исключений (${BPrev.excluded.length}):</b> `
+        + BPrev.excluded.map(e => `${esc(e.full_name)} — ${esc(e.reason)}`).join('; ') + '. Требуется ручная донастройка.</div>';
+    }
+    h += '<div class="row" style="margin-bottom:16px"><button class="btn btn-pri" onclick="applyBudget()">Утвердить и применить</button>'
+      + '<button class="btn" onclick="BPrev=null;render()">Отменить</button></div>';
+  }
+
+  h += '<div class="tbl-wrap"><table><thead><tr><th>Сотрудник</th><th>Грейд</th><th class="r">Бюджет</th><th class="r">Начислено</th><th class="r">Израсходовано</th><th class="r">Остаток</th></tr></thead><tbody>'
+    + d.rows.map(r => `<tr><td><b>${esc(r.full_name)}</b><div class="hint">${esc(r.department)}</div></td>`
+      + `<td>${r.grade || '<span class="tag tag-c">нет грейда</span>'}</td>`
+      + `<td class="r num">${fmt(r.budget)}</td><td class="r num">${fmt(r.granted)}</td><td class="r num">${fmt(r.spent)}</td>`
+      + `<td class="r num"><b>${fmt(r.left)}</b>${r.frozen ? ' <span class="tag tag-c">заморожен</span>' : ''}</td></tr>`).join('')
+    + '</tbody></table></div>';
+  return h;
+}
+
+async function previewBudget() {
+  BPrev = await API.post('/api/pult/budgets/preview');
+  await render();
+}
+
+async function applyBudget() {
+  const r = await API.post('/api/pult/budgets/apply');
+  BPrev = null; await render();
+  toast(`Бюджеты пересчитаны: ${r.applied} сотрудников`);
+}
+
+async function scrAPoints() {
+  const d = await API.get('/api/pult/budgets');
+  let h = pageHead('Начисления и списания', 'Ручные операции с обязательным комментарием',
+    '<button class="btn btn-pri" onclick="MOD={kind:\'grant\',mode:\'add\',burnable:true};renderModal()">Ручная операция</button>');
+  h += '<div class="tbl-wrap"><table><thead><tr><th>Сотрудник</th><th class="r">Начислено</th><th class="r">Израсходовано</th><th class="r">Остаток</th><th></th></tr></thead><tbody>'
+    + d.rows.map(r => `<tr><td><b>${esc(r.full_name)}</b><div class="hint">${esc(r.department)}</div></td>`
+      + `<td class="r num">${fmt(r.granted)}</td><td class="r num">${fmt(r.spent)}</td><td class="r num"><b>${fmt(r.left)}</b></td>`
+      + '<td class="r" style="white-space:nowrap">'
+      + `<button class="btn btn-s" onclick="MOD={kind:'grant',mode:'add',user_id:${r.user_id},burnable:true};renderModal()">Начислить</button> `
+      + `<button class="btn btn-s" onclick="freezePoints(${r.user_id},${!r.frozen})">${r.frozen ? 'Разморозить' : 'Заморозить'}</button></td></tr>`).join('')
+    + '</tbody></table></div>';
+  CACHE.people = d.rows;
+  return h;
+}
+
+function modGrant() {
+  const people = CACHE.people || [];
+  return '<div class="modal-h"><h2>Ручная операция с баллами</h2><button class="x" onclick="closeModal()">✕</button></div><div class="modal-b">'
+    + '<div class="chips" style="margin-bottom:13px">'
+    + `<button class="chip${MOD.mode === 'add' ? ' on' : ''}" onclick="MOD.mode='add';renderModal()">Начисление</button>`
+    + `<button class="chip${MOD.mode === 'sub' ? ' on' : ''}" onclick="MOD.mode='sub';renderModal()">Списание</button></div>`
+    + '<div class="grid g2"><label class="f">Сотрудник<select class="inp" onchange="MOD.user_id=this.value">'
+    + '<option value="">Выберите</option>'
+    + people.map(p => `<option value="${p.user_id}"${String(MOD.user_id) === String(p.user_id) ? ' selected' : ''}>${esc(p.full_name)}</option>`).join('')
+    + '</select></label>'
+    + `<label class="f">Количество баллов<input class="inp" type="number" min="0" step="100" value="${MOD.amount || ''}" oninput="MOD.amount=this.value"></label></div>`
+    + (MOD.mode === 'add' ? `<div class="row" style="margin-top:11px"><label class="sw"><input type="checkbox" ${MOD.burnable ? 'checked' : ''} onchange="MOD.burnable=this.checked"><i></i>Сгораемые баллы</label></div>` : '')
+    + `<label class="f" style="margin-top:11px">Комментарий (обязательно)<textarea class="inp" oninput="MOD.reason=this.value" placeholder="Основание операции">${esc(MOD.reason || '')}</textarea></label>`
+    + '<div class="note note-w" style="margin-top:11px">Финансово значимая операция фиксируется в журнале аудита. Превышение потолка попадёт в журнал аномалий.</div>'
+    + '</div><div class="modal-f"><button class="btn" onclick="closeModal()">Отмена</button>'
+    + '<button class="btn btn-pri" onclick="doGrant()">Подтвердить</button></div>';
+}
+
+async function doGrant() {
+  if (!MOD.user_id || !MOD.amount || !MOD.reason) return toast('Заполните сотрудника, сумму и комментарий', true);
+  try {
+    const path = MOD.mode === 'add' ? '/api/pult/points/grant' : '/api/pult/points/spend';
+    const body = {user_id: Number(MOD.user_id), amount: Number(MOD.amount), reason: MOD.reason};
+    if (MOD.mode === 'add') body.burnable = !!MOD.burnable;
+    await API.post(path, body);
+    closeModal(); await loadMe(); await render();
+    toast(MOD.mode === 'add' ? 'Баллы начислены' : 'Баллы списаны');
+  } catch (e) { toast(e.message, true); }
+}
+
+async function freezePoints(id, value) {
+  try { await API.post(`/api/pult/points/freeze/${id}?value=${value}`); await render(); toast(value ? 'Баллы заморожены' : 'Баллы разморожены'); }
+  catch (e) { toast(e.message, true); }
+}
+</script>
+
+<script>
+/* ---------- пульт: окна, заказы, люди, промо, обращения ---------- */
+
+async function scrACamp() {
+  const camps = await API.get('/api/pult/campaigns');
+  let h = pageHead('Окна выбора и правила изменения льгот');
+  h += '<div class="tbl-wrap" style="margin-bottom:16px"><table><thead><tr><th>Кампания</th><th>Период</th><th>Состояние</th><th></th></tr></thead><tbody>'
+    + camps.map(c => `<tr><td><b>${esc(c.title)}</b></td><td class="num">${dt(c.date_from)} — ${dt(c.date_to)}</td>`
+      + `<td>${c.is_open ? '<span class="tag tag-g">открыта</span>' : '<span class="tag tag-c">закрыта</span>'}</td>`
+      + `<td class="r"><button class="btn btn-s" onclick="toggleCamp(${c.id})">${c.is_open ? 'Закрыть' : 'Открыть'}</button></td></tr>`).join('')
+    + '</tbody></table></div>';
+  h += '<div class="card card-p"><h2 style="margin-bottom:11px">Правила изменения льгот</h2>'
+    + '<div class="hint">Режим задаётся настройкой <b>window_mode</b> в разделе «Настройки платформы»: '
+    + '<b>restrict</b> блокирует оформление и отмену вне окна, <b>inform</b> разрешает изменения с уведомлением HR. '
+    + 'Проверка выполняется на сервере при каждом оформлении и отмене.</div></div>';
+  return h;
+}
+
+async function toggleCamp(id) {
+  try { await API.post(`/api/pult/campaigns/${id}/toggle`); await render(); toast('Состояние кампании изменено'); }
+  catch (e) { toast(e.message, true); }
+}
+
+let OF = 'all';
+
+async function scrAOrders() {
+  const orders = await API.get('/api/pult/orders' + (OF !== 'all' ? '?status_filter=' + OF : ''));
+  const all = await API.get('/api/pult/orders');
+  let h = pageHead('Заказы и согласования', `${all.length} записей всего`);
+  h += '<div class="chips" style="margin-bottom:14px">'
+    + `<button class="chip${OF === 'all' ? ' on' : ''}" onclick="OF='all';render()">Все</button>`
+    + Object.entries(STATUS).map(([k, v]) => `<button class="chip${OF === k ? ' on' : ''}" onclick="OF='${k}';render()">${v.t} (${all.filter(o => o.status === k).length})</button>`).join('')
+    + '</div>';
+  if (!orders.length) return h + '<div class="card"><div class="empty">Заказов с таким статусом нет</div></div>';
+
+  h += '<div class="tbl-wrap"><table><thead><tr><th>Заказ</th><th>Сотрудник</th><th>Позиция</th><th class="r">Баллы</th><th>Маршрут согласования</th><th>Статус</th><th></th></tr></thead><tbody>';
+  orders.forEach(o => {
+    h += `<tr><td><span class="mono">${o.public_id}</span><div class="hint num">${dtt(o.created_at)}</div>`
+      + (o.note ? `<div class="hint">${esc(o.note)}</div>` : '') + '</td>'
+      + `<td><b>${esc(o.user_name)}</b></td>`
+      + `<td>${esc(o.item_title)}<div class="hint">${TYPE_LABEL[o.item_type] || ''}</div></td>`
+      + `<td class="r num">${o.price ? fmt(o.price) : '—'}</td>`
+      + `<td>${o.approvals_chain && o.approvals_chain.length
+          ? o.approvals_chain.map(a => `<div class="hint">${a.approver}: ${a.result === true ? '<span style="color:var(--good)">согласовано</span>' : a.result === false ? '<span style="color:var(--crit)">отклонено</span>' : 'ожидает'}</div>`).join('')
+          : '<span class="hint">не требуется</span>'}</td>`
+      + `<td><span class="tag ${STATUS[o.status].c}">${STATUS[o.status].t}</span></td>`
+      + '<td class="r" style="white-space:nowrap">'
+      + (o.status === 'approve'
+        ? `<button class="btn btn-s btn-pri" onclick="decide(${o.id},true)">Согласовать</button> <button class="btn btn-s btn-dng" onclick="decide(${o.id},false)">Отклонить</button>`
+        : o.status === 'work' ? `<button class="btn btn-s" onclick="completeOrder(${o.id})">Отметить выполненным</button>`
+        : '<span class="hint">—</span>')
+      + '</td></tr>';
+  });
+  return h + '</tbody></table></div>'
+    + '<div class="hint" style="margin-top:10px">Маршрут согласования строится по руководителю сотрудника. При отклонении баллы возвращаются автоматически.</div>';
+}
+
+async function decide(id, approved) {
+  try { await API.post(`/api/pult/orders/${id}/decide?approved=${approved}`); await render(); toast(approved ? 'Заказ согласован' : 'Заказ отклонён, баллы возвращены'); }
+  catch (e) { toast(e.message, true); }
+}
+
+async function completeOrder(id) {
+  try { await API.post(`/api/pult/orders/${id}/complete`); await render(); toast('Заказ отмечен выполненным'); }
+  catch (e) { toast(e.message, true); }
+}
+
+async function scrAPeople() {
+  const d = await API.get('/api/pult/people');
+  const canEditRoles = ME.user.role === 'admin';
+  let h = pageHead('Сотрудники, роли и сегменты', `${d.rows.length} записей · синхронизация с 1С:ЗУП`);
+  h += '<div class="tbl-wrap"><table><thead><tr><th>Сотрудник</th><th>Подразделение</th><th>Грейд</th><th>Роль</th><th class="r">Доступно</th></tr></thead><tbody>'
+    + d.rows.map(r => `<tr><td><b>${esc(r.full_name)}</b><div class="hint">${esc(r.position)}</div></td>`
+      + `<td>${esc(r.department)}<div class="hint">с ${dt(r.hired_at)}</div></td>`
+      + `<td>${r.grade || '<span class="tag tag-c">нет</span>'}</td>`
+      + `<td>${canEditRoles
+          ? `<select class="inp" style="width:auto;padding:4px 8px" onchange="setRole(${r.id},this.value)">`
+            + Object.entries(d.role_matrix).map(([k, v]) => `<option value="${k}"${r.role === k ? ' selected' : ''}>${v.title}</option>`).join('')
+            + '</select>'
+          : `<span class="tag">${esc(r.role_title)}</span>`}</td>`
+      + `<td class="r num">${fmt(r.available)}${r.frozen ? ' <span class="tag tag-c">заморожен</span>' : ''}</td></tr>`).join('')
+    + '</tbody></table></div>';
+
+  h += '<div class="card card-p" style="margin-top:18px"><h2 style="margin-bottom:9px">Карта «роль → права»</h2>'
+    + Object.entries(d.role_matrix).map(([k, v]) => `<div class="li" style="padding:8px 0"><div class="li-b"><div class="li-t">${v.title}</div><div class="li-s">${v.description}</div></div></div>`).join('')
+    + '<div class="hint" style="margin-top:7px">Изменение роли фиксируется в журнале аудита. Права проверяются на сервере при каждом запросе.</div>'
+    + (canEditRoles ? '' : '<div class="note note-w" style="margin-top:11px">Изменение ролей доступно только администратору.</div>')
+    + '</div>';
+  return h;
+}
+
+async function setRole(id, role) {
+  try { await API.post(`/api/pult/people/${id}/role?role=${role}`); await render(); toast('Роль изменена'); }
+  catch (e) { toast(e.message, true); await render(); }
+}
+
+async function scrAPromo() {
+  const d = await API.get('/api/pult/promo');
+  let h = pageHead('Промокоды и сертификаты', 'Партии, остатки, сроки годности');
+  h += '<div class="tbl-wrap" style="margin-bottom:16px"><table><thead><tr><th>Позиция</th><th class="r">Загружено</th><th class="r">Выдано</th><th class="r">Остаток</th><th>Порог</th><th>Срок</th><th></th></tr></thead><tbody>'
+    + d.batches.map(b => `<tr><td><b>${esc(b.title)}</b><div class="hint">${esc(b.supplier)}</div></td>`
+      + `<td class="r num">${b.total}</td><td class="r num">${b.used}</td>`
+      + `<td class="r num"><b${b.below_threshold ? ' style="color:var(--crit)"' : ''}>${b.left}</b></td>`
+      + `<td class="num">${b.low_at}${b.below_threshold ? ' <span class="tag tag-c">ниже порога</span>' : ''}</td>`
+      + `<td class="num">${dt(b.expires_at)}</td>`
+      + `<td class="r"><button class="btn btn-s" onclick="loadBatch(${b.item_id})">Загрузить партию</button></td></tr>`).join('')
+    + '</tbody></table></div>';
+  if (d.issued.length) {
+    h += '<div class="sec"><div class="sec-h"><h2>Выданные коды</h2></div>'
+      + '<div class="tbl-wrap"><table><thead><tr><th>Заказ</th><th>Сотрудник</th><th>Позиция</th><th>Код</th><th>Дата</th></tr></thead><tbody>'
+      + d.issued.map(i => `<tr><td class="mono">${i.public_id}</td><td>${esc(i.user)}</td><td>${esc(i.item)}</td>`
+        + `<td class="mono">${esc(i.code)}</td><td class="num">${dtt(i.at)}</td></tr>`).join('')
+      + '</tbody></table></div></div>';
+  }
+  return h;
+}
+
+async function loadBatch(id) {
+  try { await API.post(`/api/pult/promo/${id}/load?count=50`); await render(); toast('Загружено 50 кодов'); }
+  catch (e) { toast(e.message, true); }
+}
+
+async function scrASupport() {
+  const tickets = await API.get('/api/pult/tickets');
+  const open = tickets.filter(t => t.status === 'open');
+  let h = pageHead('Обращения', `${open.length} открытых из ${tickets.length}`);
+  h += '<div class="tbl-wrap"><table><thead><tr><th>Номер</th><th>Сотрудник</th><th>Тема и описание</th><th>Дата</th><th>Статус</th><th></th></tr></thead><tbody>'
+    + tickets.map(t => `<tr><td class="mono">${t.public_id}</td><td>${esc(t.user_name)}</td>`
+      + `<td><b>${esc(t.topic)}</b><div class="hint">${esc(t.body)}</div>`
+      + (t.answer ? `<div class="hint" style="color:var(--good);margin-top:3px">Ответ: ${esc(t.answer)}</div>` : '') + '</td>'
+      + `<td class="num">${dtt(t.created_at)}</td>`
+      + `<td><span class="tag ${t.status === 'open' ? 'tag-w' : 'tag-g'}">${t.status === 'open' ? 'В работе' : 'Закрыто'}</span></td>`
+      + `<td class="r">${t.status === 'open' ? `<button class="btn btn-s btn-pri" onclick="answerTicket(${t.id})">Ответить и закрыть</button>` : '<span class="hint">—</span>'}</td></tr>`).join('')
+    + '</tbody></table></div>';
+  return h;
+}
+
+async function answerTicket(id) {
+  const text = 'Обращение обработано, решение направлено сотруднику.';
+  try { await API.post(`/api/pult/tickets/${id}/answer?answer=${encodeURIComponent(text)}`); await render(); toast('Обращение закрыто'); }
+  catch (e) { toast(e.message, true); }
+}
+
+async function scrAExport() {
+  const d = await API.get('/api/pult/export');
+  let h = pageHead('Выгрузка в бухгалтерию', `${d.rows.length} строк · сумма ${fmt(d.total_rub)} ₽`,
+    '<a class="btn btn-pri" href="/api/pult/export.csv" download>Скачать CSV</a>');
+  h += '<div class="grid g3" style="margin-bottom:16px">'
+    + kpi('Строк в выгрузке', String(d.rows.length), 'заказы, кроме отменённых')
+    + kpi('Сумма к учёту', fmt(d.total_rub) + ' ₽', 'по стоимости балла из настроек')
+    + kpi('Ошибок валидации', String(d.invalid.length), d.invalid.length ? 'незаполненные обязательные поля' : 'все поля заполнены')
+    + '</div>';
+  h += '<div class="tbl-wrap"><table><thead><tr>' + d.columns.map(c => `<th>${esc(c)}</th>`).join('') + '</tr></thead><tbody>'
+    + d.rows.map(r => '<tr>' + r.map((v, i) => `<td${i === 12 ? ' class="r num"' : ''}>${esc(v)}</td>`).join('') + '</tr>').join('')
+    + '</tbody></table></div>';
+  return h;
+}
+
+async function scrAAudit() {
+  const rows = await API.get('/api/pult/audit');
+  let h = pageHead('Журнал аудита', `${rows.length} записей · все финансово значимые операции`);
+  h += '<div class="tbl-wrap"><table><thead><tr><th>Время</th><th>Пользователь</th><th>Действие</th><th>Содержание</th></tr></thead><tbody>'
+    + rows.map(r => `<tr><td class="num" style="white-space:nowrap">${dtt(r.at)}</td><td>${esc(r.actor)}</td>`
+      + `<td><b>${esc(r.action)}</b></td><td class="hint">${esc(r.detail)}</td></tr>`).join('')
+    + '</tbody></table></div>';
+  return h;
+}
+
+async function scrAAnom() {
+  const rows = await API.get('/api/pult/anomalies');
+  let h = pageHead('Журнал аномалий', 'Правила контроля настраиваются администратором');
+  h += rows.length
+    ? '<div class="tbl-wrap"><table><thead><tr><th>Время</th><th>Правило</th><th>Пользователь</th><th>Детали</th><th>Статус</th><th></th></tr></thead><tbody>'
+      + rows.map(a => `<tr><td class="num">${dtt(a.at)}</td><td><b>${esc(a.rule)}</b></td><td>${esc(a.actor)}</td>`
+        + `<td class="hint">${esc(a.detail)}</td>`
+        + `<td><span class="tag ${a.status === 'open' ? 'tag-c' : 'tag-g'}">${a.status === 'open' ? 'требует проверки' : 'легитимна'}</span></td>`
+        + `<td class="r">${a.status === 'open' ? `<button class="btn btn-s" onclick="markLegit(${a.id})">Отметить легитимной</button>` : '<span class="hint">—</span>'}</td></tr>`).join('')
+      + '</tbody></table></div>'
+    : '<div class="card"><div class="empty">Аномалий не выявлено</div></div>';
+  return h;
+}
+
+async function markLegit(id) {
+  try { await API.post(`/api/pult/anomalies/${id}/legit`); await render(); toast('Операция отмечена легитимной'); }
+  catch (e) { toast(e.message, true); }
+}
+
+async function scrASet() {
+  const [settings, integrations] = await Promise.all([
+    API.get('/api/pult/settings'),
+    API.get('/api/pult/integrations'),
+  ]);
+  let h = pageHead('Настройки платформы', 'Параметры изменяются без доработки кода');
+  h += '<div class="grid g2"><div class="card card-p"><h2 style="margin-bottom:13px">Параметры</h2>'
+    + settings.filter(s => !s.key.startsWith('module_')).map(s =>
+        `<label class="f" style="margin-bottom:11px">${esc(s.title)}<input class="inp" value="${esc(s.value)}" onchange="saveSetting('${s.key}',this.value)"></label>`).join('')
+    + '</div>';
+  h += '<div class="card card-p"><h2 style="margin-bottom:13px">Включение разделов</h2>'
+    + settings.filter(s => s.key.startsWith('module_')).map(s =>
+        `<div class="row" style="justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line-2)"><span>${esc(s.title)}</span>`
+        + `<label class="sw"><input type="checkbox" ${s.value === '1' ? 'checked' : ''} onchange="saveSetting('${s.key}',this.checked?'1':'0')"><i></i></label></div>`).join('')
+    + '</div></div>';
+  h += '<div class="card card-p" style="margin-top:16px"><h2 style="margin-bottom:11px">Интеграции</h2>'
+    + '<div class="tbl-wrap"><table><thead><tr><th>Канал</th><th>Статус</th></tr></thead><tbody>'
+    + integrations.map(i => `<tr><td><b>${esc(i.name)}</b></td>`
+      + `<td>${i.status === 'available' ? '<span class="tag tag-g"><i class="dot"></i>доступен</span>' : '<span class="tag tag-w">не настроен</span>'}</td></tr>`).join('')
+    + '</tbody></table></div>'
+    + '<div class="hint" style="margin-top:10px">Развёртывание в закрытом контуре заказчика. Инфраструктура в границы задачи не входит.</div></div>';
+  return h;
+}
+
+async function saveSetting(key, value) {
+  try { await API.put(`/api/pult/settings/${key}`, {value: String(value)}); toast('Настройка сохранена'); }
+  catch (e) { toast(e.message, true); }
+}
+</script>
+
+<script>
+/* ============================ ГРАФИКИ ============================ */
+
+let CH_INST = [];
+const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+function killCharts() {
+  CH_INST.forEach(c => { try { c.destroy(); } catch (e) {} });
+  CH_INST = [];
+}
+
+function drawCharts() {
+  killCharts();
+  if (typeof Chart === 'undefined') return;
+
+  const ink = cssv('--ink-2'), muted = cssv('--muted'), line = cssv('--line'),
+        accent = cssv('--accent'), amber = cssv('--amber'), faint = cssv('--faint'), soft = cssv('--line-2');
+  Chart.defaults.font.family = "'IBM Plex Sans', sans-serif";
+  Chart.defaults.font.size = 11;
+  Chart.defaults.color = muted;
+  const grid = {color: soft, drawBorder: false};
+  const d = CACHE.dash;
+
+  const elDept = document.getElementById('chDept');
+  if (elDept && d) {
+    CH_INST.push(new Chart(elDept, {
+      type: 'bar',
+      data: {
+        labels: d.by_department.map(x => x.name),
+        datasets: [
+          {label: 'Израсходовано', data: d.by_department.map(x => x.spent), backgroundColor: accent, borderWidth: 0, barThickness: 16},
+          {label: 'Остаток', data: d.by_department.map(x => Math.max(0, x.granted - x.spent)), backgroundColor: line, borderWidth: 0, barThickness: 16},
+        ],
+      },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        plugins: {legend: {display: false}, tooltip: {callbacks: {label: c => c.dataset.label + ': ' + c.parsed.x.toLocaleString('ru-RU') + ' Б'}}},
+        scales: {x: {stacked: true, grid, ticks: {callback: v => v.toLocaleString('ru-RU')}}, y: {stacked: true, grid: {display: false}, ticks: {color: ink}}},
+      },
+    }));
+  }
+
+  const elMix = document.getElementById('chMix');
+  if (elMix && d) {
+    CH_INST.push(new Chart(elMix, {
+      type: 'doughnut',
+      data: {
+        labels: ['Израсходовано', 'Сгораемые', 'Несгораемые'],
+        datasets: [{data: [d.points_mix.spent, d.points_mix.burnable, d.points_mix.permanent],
+                    backgroundColor: [faint, amber, accent], borderWidth: 0}],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '62%',
+        plugins: {legend: {position: 'right', labels: {boxWidth: 9, boxHeight: 9, padding: 11, usePointStyle: true, pointStyle: 'rect'}},
+                  tooltip: {callbacks: {label: c => c.label + ': ' + c.parsed.toLocaleString('ru-RU') + ' Б'}}},
+      },
+    }));
+  }
+
+  const elMonth = document.getElementById('chMonth');
+  if (elMonth && d) {
+    CH_INST.push(new Chart(elMonth, {
+      type: 'line',
+      data: {
+        labels: ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'],
+        datasets: [{data: d.orders_by_month, borderColor: accent, backgroundColor: cssv('--accent-tint'),
+                    fill: true, tension: .3, pointRadius: 3, pointBackgroundColor: accent, borderWidth: 2}],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {legend: {display: false}, tooltip: {callbacks: {label: c => c.parsed.y + ' заказов'}}},
+        scales: {x: {grid: {display: false}}, y: {grid, beginAtZero: true, ticks: {precision: 0}}},
+      },
+    }));
+  }
+
+  const elPoints = document.getElementById('chPoints');
+  if (elPoints && CACHE.chartPoints) {
+    const months = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
+    const data = months.map((m, i) => CACHE.chartPoints
+      .filter(l => new Date(l.granted_at).getMonth() === i)
+      .reduce((s, l) => s + l.amount, 0));
+    CH_INST.push(new Chart(elPoints, {
+      type: 'bar',
+      data: {labels: months, datasets: [{data, backgroundColor: data.map(v => v > 0 ? accent : soft), borderWidth: 0, barThickness: 20}]},
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {legend: {display: false}, tooltip: {callbacks: {label: c => c.parsed.y.toLocaleString('ru-RU') + ' баллов'}}},
+        scales: {x: {grid: {display: false}}, y: {grid, beginAtZero: true, ticks: {callback: v => v.toLocaleString('ru-RU')}}},
+      },
+    }));
+  }
+}
+
+/* ============================ РОУТЕР ============================ */
+
+const SCREENS = {
+  home: scrHome, catalog: scrCatalog, cart: scrCart, health: scrHealth,
+  orders: scrOrders, points: scrPoints, transfer: scrTransfer, charity: scrCharity,
+  news: scrNews, survey: scrSurvey, support: scrSupport,
+  dash: scrDash, 'a-catalog': scrACatalog, 'a-budget': scrABudget, 'a-points': scrAPoints,
+  'a-camp': scrACamp, 'a-orders': scrAOrders, 'a-people': scrAPeople, 'a-promo': scrAPromo,
+  'a-support': scrASupport, 'a-export': scrAExport, 'a-audit': scrAAudit,
+  'a-anom': scrAAnom, 'a-set': scrASet,
+};
+
+async function render() {
+  await renderAuth();
+  if (!ME) return;
+
+  topBar();
+  renderNav();
+  const view = document.getElementById('view');
+  const fn = SCREENS[SCREEN];
+
+  if (!fn) { view.innerHTML = pageHead('Раздел не найден'); return; }
+
+  view.innerHTML = loading();
+  try {
+    view.innerHTML = await fn();
+    drawCharts();
+  } catch (e) {
+    if (e.status === 401) { logout(); return; }
+    view.innerHTML = pageHead('Не удалось загрузить раздел')
+      + `<div class="card card-p"><div class="note note-c">${esc(e.message)}</div></div>`;
+  }
+}
+
+/* ============================ СТАРТ ============================ */
+
+(async function start() {
+  try {
+    const theme = localStorage.getItem(THEME_KEY);
+    if (theme) document.documentElement.setAttribute('data-theme', theme);
+  } catch (e) {}
+
+  let saved = null;
+  try { saved = localStorage.getItem(TOKEN_KEY); } catch (e) {}
+
+  if (saved) {
+    API.token = saved;
+    try {
+      await loadMe();
+      SCREEN = (ME.pult && ME.pult.length) ? 'dash' : 'home';
+    } catch (e) {
+      ME = null; API.token = null;
+      try { localStorage.removeItem(TOKEN_KEY); } catch (e2) {}
+    }
+  }
+  await render();
+})();
+</script>
+</body>
+</html>
