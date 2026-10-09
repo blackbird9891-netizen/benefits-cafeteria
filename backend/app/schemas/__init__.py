@@ -97,21 +97,24 @@ class ItemOut(ORMModel):
 
 
 class ItemIn(BaseModel):
+    """Длины согласованы с моделью: PostgreSQL отклоняет перебор на уровне
+    СУБД и отдаёт 500, поэтому проверка нужна на входе."""
+
     section_id: int
-    category: str = ""
-    title: str
-    price: int = 0
-    item_type: str = "gift"
-    supplier: str = ""
-    description: str = ""
-    conditions: str = ""
-    icon: str = "▣"
+    category: str = Field(default="", max_length=128)
+    title: str = Field(min_length=1, max_length=255)
+    price: int = Field(default=0, ge=0)
+    item_type: str = Field(default="gift", max_length=32)
+    supplier: str = Field(default="", max_length=255)
+    description: str = Field(default="", max_length=4000)
+    conditions: str = Field(default="", max_length=4000)
+    icon: str = Field(default="▣", max_length=8)
     stock: int | None = None
     seats: int | None = None
     low_at: int = 5
     cap_amount: int | None = None
-    limit_count: int | None = None
-    limit_period: str | None = None
+    limit_count: int | None = Field(default=None, ge=0)
+    limit_period: str | None = Field(default=None, max_length=32)
     needs_doc: bool = False
     has_slots: bool = False
     approvals: list | None = None
@@ -197,7 +200,7 @@ class CampaignOut(ORMModel):
 
 
 class CampaignIn(BaseModel):
-    title: str
+    title: str = Field(min_length=1, max_length=255)
     date_from: date
     date_to: date
     is_open: bool = True
@@ -206,10 +209,10 @@ class CampaignIn(BaseModel):
 # --- ДМС ---
 
 class FamilyMemberIn(BaseModel):
-    full_name: str
+    full_name: str = Field(min_length=1, max_length=255)
     birth_date: date
-    relation: str
-    sex: str = ""
+    relation: str = Field(min_length=1, max_length=64)
+    sex: str = Field(default="", max_length=8)
 
 
 class FamilyMemberOut(ORMModel):

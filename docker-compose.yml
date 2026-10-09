@@ -14,7 +14,11 @@ services:
       retries: 10
 
   backend:
-    build: ./backend
+    # Контекст — корень проекта: образу нужен и backend, и frontend
+    # (бэкенд умеет сам отдавать клиентскую часть при одиночном развёртывании).
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     environment:
       DATABASE_URL: postgresql+psycopg://cafeteria:cafeteria@db:5432/cafeteria
       JWT_SECRET: change-me-in-production

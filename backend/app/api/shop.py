@@ -145,8 +145,21 @@ def order_out(order: Order) -> schemas.OrderOut:
     return data
 
 
+# Префиксы промокодов должны быть латиницей: код уходит партнёру и
+# вводится в чужих системах, кириллица там не принимается.
+TRANSLIT = {
+    "а": "A", "б": "B", "в": "V", "г": "G", "д": "D", "е": "E", "ё": "E",
+    "ж": "ZH", "з": "Z", "и": "I", "й": "Y", "к": "K", "л": "L", "м": "M",
+    "н": "N", "о": "O", "п": "P", "р": "R", "с": "S", "т": "T", "у": "U",
+    "ф": "F", "х": "H", "ц": "C", "ч": "CH", "ш": "SH", "щ": "SCH",
+    "ы": "Y", "э": "E", "ю": "YU", "я": "YA", "ъ": "", "ь": "",
+}
+
+
 def gen_code(item: CatalogItem) -> str:
-    prefix = (item.title[:3] or "GFT").upper()
+    latin = "".join(TRANSLIT.get(ch, ch if ch.isascii() and ch.isalnum() else "")
+                    for ch in item.title.lower())
+    prefix = (latin[:3] or "GFT").upper()
     chunk = lambda: "".join(random.choices(string.ascii_uppercase + string.digits, k=4))
     return f"{prefix}-{chunk()}-{chunk()}"
 

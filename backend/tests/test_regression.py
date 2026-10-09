@@ -114,3 +114,49 @@ def test_burn_date_never_overflows_month(start, months, expected):
     """Срок сгорания, посчитанный от конца месяца, не должен уезжать
     в следующий месяц: 31 августа плюс месяц — это 30 сентября."""
     assert pts.add_months(start, months) == expected
+
+
+def test_promo_code_prefix_is_latin(api):
+    """Дефект, найденный только в Docker: префикс промокода брался из первых
+    трёх символов названия позиции, и для русского названия код выходил
+    кириллическим — «ПОД-5ICV-NEJE». Такой код не примет ни одна партнёрская
+    система: он уходит наружу и вводится в чужих интерфейсах."""
+    api.as_employee()
+    item = next(i for i in api.get("/api/catalog").json() if i["item_type"] == "gift")
+    order = api.post("/api/checkout",
+                     json={"lines": [{"item_id": item["id"], "options": {}}]}).json()["orders"][0]
+
+    code = order["code"]
+    assert code, "промокод должен быть выдан сразу"
+    assert code.isascii(), f"промокод содержит не-ASCII символы: {code}"
+    assert all(ch.isalnum() or ch == "-" for ch in code), code
+
+
+@pytest.mark.parametrize("field,length", [
+    ("title", 300),
+    ("supplier", 300),
+    ("category", 200),
+])
+def test_long_strings_rejected_with_422(api, field, length):
+    """Дефект, найденный только в Docker: схема позиции не ограничивала длину
+    строк, а модель объявляет String(255). SQLite писал молча, PostgreSQL
+    отклонял на уровне СУБД — пользователь получал 500 вместо внятного отказа."""
+    api.as_admin()
+    section_id = api.get("/api/sections").json()[0]["id"]
+    payload = {"section_id": section_id, "title": "Позиция", "price": 100,
+               "item_type": "gift", field: "я" * length}
+
+    r = api.post("/api/pult/catalog", json=payload)
+    assert r.status_code == 422, f"ожидался отказ валидации, получено {r.status_code}: {r.text}"
+
+
+def test_valid_item_still_passes(api):
+    """Контроль: ограничения не должны ломать обычное создание позиции."""
+    api.as_admin()
+    section_id = api.get("/api/sections").json()[0]["id"]
+    r = api.post("/api/pult/catalog", json={
+        "section_id": section_id, "title": "Сертификат в книжный магазин",
+        "price": 2500, "item_type": "gift", "supplier": "ООО «Книги»",
+        "description": "Электронный сертификат, срок действия год.",
+    })
+    assert r.status_code == 201, r.text

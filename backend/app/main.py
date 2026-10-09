@@ -3,9 +3,10 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
+from sqlalchemy.exc import DataError, IntegrityError
 
 from app.api import auth, pult, shop
 from app.config import settings
@@ -54,6 +55,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Ограничения СУБД не должны долетать до клиента пятисотой ошибкой.
+# Схемы ввода проверяют длины и диапазоны, но уникальные индексы и
+# внешние ключи остаются за базой: SQLite часть из них пропускает молча,
+# PostgreSQL отклоняет. Обработчик переводит такие отказы в 400 и не
+# показывает наружу текст запроса — в нём могут быть чужие данные.
+@app.exception_handler(IntegrityError)
+@app.exception_handler(DataError)
+async def db_constraint_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=400,
+        content={"detail": "Данные не прошли проверку базы: "
+                           "возможно, значение слишком длинное или уже занято."},
+    )
+
+
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(shop.router, prefix="/api", tags=["shop"])
 app.include_router(pult.router, prefix="/api/pult", tags=["pult"])
@@ -67,11 +83,19 @@ def health():
 # Раздача клиентской части тем же сервисом.
 # В контуре с docker-compose фронт отдаёт nginx, здесь — запасной путь
 # для одиночного развёртывания (один контейнер вместо трёх).
-FRONTEND = Path(__file__).resolve().parents[2] / "frontend" / "index.html"
+# В контейнере код лежит в /app/app, клиентская часть в /app/frontend.
+# При локальном запуске — backend/app и frontend рядом с backend.
+_ROOT = Path(__file__).resolve()
+FRONTEND = next(
+    (p for p in (_ROOT.parents[1] / "frontend" / "index.html",
+                 _ROOT.parents[2] / "frontend" / "index.html")
+     if p.exists()),
+    None,
+)
 
 
 @app.get("/", include_in_schema=False)
 def index():
-    if FRONTEND.exists():
+    if FRONTEND:
         return FileResponse(FRONTEND, media_type="text/html; charset=utf-8")
     return {"detail": "Клиентская часть не найдена. API доступен по /api/docs"}
