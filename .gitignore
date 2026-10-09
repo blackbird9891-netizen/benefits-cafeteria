@@ -4,3 +4,7 @@ __pycache__/
 *.db
 .env
 .DS_Store
+.coverage
+.pytest_cache/
+.ruff_cache/
+htmlcov/
