@@ -18,11 +18,11 @@ def test_refuse_keeps_points(api):
     api.as_employee()
     before = api.get("/api/me").json()["balance"]["available"]
 
-    r = api.post("/api/dms/refuse?value=true")
+    r = api.post("/api/dms/refuse", json={"value": True})
     assert r.json()["refused"] is True
     assert api.get("/api/me").json()["balance"]["available"] == before
 
-    assert api.post("/api/dms/refuse?value=false").json()["refused"] is False
+    assert api.post("/api/dms/refuse", json={"value": False}).json()["refused"] is False
 
 
 def test_extension_lands_in_policy(api):
@@ -131,19 +131,19 @@ def test_survey_vote_counted_once(api):
     survey = api.get("/api/surveys").json()[0]
     before = survey["votes"][0]
 
-    assert api.post(f"/api/surveys/{survey['id']}/vote?choice=0").status_code == 200
+    assert api.post(f"/api/surveys/{survey['id']}/vote", json={"choice": 0}).status_code == 200
 
     after = api.get("/api/surveys").json()[0]
     assert after["votes"][0] == before + 1
     assert after["my_vote"] == 0
 
-    assert api.post(f"/api/surveys/{survey['id']}/vote?choice=1").status_code == 409
+    assert api.post(f"/api/surveys/{survey['id']}/vote", json={"choice": 1}).status_code == 409
 
 
 def test_survey_rejects_invalid_choice(api):
     api.as_employee()
     survey = api.get("/api/surveys").json()[0]
-    assert api.post(f"/api/surveys/{survey['id']}/vote?choice=99").status_code == 400
+    assert api.post(f"/api/surveys/{survey['id']}/vote", json={"choice": 99}).status_code == 400
 
 
 def test_comment_goes_to_moderation(api):

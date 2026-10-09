@@ -18,6 +18,7 @@ from app.api.deps import (
 from app.core import points as pts
 from app.database import get_db
 from app.models import (
+    LIMIT_PERIODS,
     Anomaly,
     Campaign,
     CatalogItem,
@@ -79,14 +80,11 @@ def window_block(db: Session) -> str | None:
 def bought_count(db: Session, user_id: int, item_id: int, period: str | None) -> int:
     from datetime import timedelta
 
-    deltas = {
-        "день": timedelta(days=1),
-        "неделя": timedelta(days=7),
-        "месяц": timedelta(days=30),
-        "квартал": timedelta(days=92),
-        "год": timedelta(days=365),
-    }
-    since = datetime.now() - deltas.get(period or "", timedelta(days=36500))
+    # Период приходит из схемы, где он ограничен перечислением. Запись из
+    # более старой базы с неизвестным периодом считаем бессрочной — но это
+    # видно в данных, а не возникает из опечатки при создании позиции.
+    days = LIMIT_PERIODS.get(period or "", 36500)
+    since = datetime.now() - timedelta(days=days)
     rows = db.scalars(
         select(Order).where(
             Order.user_id == user_id,
@@ -449,7 +447,9 @@ def read_dms(db: Session = Depends(get_db), user: User = Depends(get_active_user
 
 
 @router.post("/dms/refuse", response_model=schemas.DmsOut)
-def refuse_dms(value: bool = True, db: Session = Depends(get_db), user: User = Depends(get_active_user)):
+def refuse_dms(payload: schemas.ToggleIn, db: Session = Depends(get_db),
+               user: User = Depends(get_active_user)):
+    value = payload.value
     """ФТ-ДМС.8: при отказе неиспользованные баллы остаются у сотрудника."""
     policy = db.scalar(select(DmsPolicy).where(DmsPolicy.user_id == user.id))
     if not policy:
@@ -593,7 +593,9 @@ def list_surveys(db: Session = Depends(get_db), user: User = Depends(get_active_
 
 
 @router.post("/surveys/{survey_id}/vote")
-def vote(survey_id: int, choice: int, db: Session = Depends(get_db), user: User = Depends(get_active_user)):
+def vote(survey_id: int, payload: schemas.VoteIn, db: Session = Depends(get_db),
+         user: User = Depends(get_active_user)):
+    choice = payload.choice
     survey = db.get(Survey, survey_id)
     if not survey or not survey.is_open:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Опрос недоступен")

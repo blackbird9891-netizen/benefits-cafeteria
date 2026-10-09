@@ -217,3 +217,120 @@ def test_decision_comment_length_is_limited(api):
     chain = next(o for o in api.get("/api/pult/orders").json()
                  if o["id"] == order["id"])["approvals_chain"]
     assert chain[0]["result"] is None, "отклонённая валидация не должна менять заявку"
+
+
+def test_item_type_must_be_known(api):
+    """Дефект: схема принимала произвольную строку в типе позиции, хотя тип
+    определяет поведение при оформлении — слоты, документы, промокоды.
+    Позиция с мусорным типом создавалась, попадала в витрину, покупалась
+    мимо всех проверок и уходила в выгрузку бухгалтерии. Та же строка
+    подставлялась в разметку, то есть ещё и хранимый XSS."""
+    api.as_admin()
+    payload = {"section_id": 1, "title": "Мусорный тип", "price": 100}
+
+    for bad in ["<img src=x onerror=alert(1)>", "чтоугодно", "GIFT", ""]:
+        r = api.post("/api/pult/catalog", json={**payload, "item_type": bad})
+        assert r.status_code == 422, f"тип {bad!r} не должен приниматься, получено {r.status_code}"
+
+    r = api.post("/api/pult/catalog", json={**payload, "item_type": "gift"})
+    assert r.status_code == 201, r.text
+
+
+def test_limit_period_must_be_known(api):
+    """Дефект: неизвестный период лимита молча превращался в срок длиной
+    сто лет, то есть опечатка «месяцев» вместо «месяц» тихо отменяла
+    ограничение, и администратор об этом не узнавал."""
+    api.as_admin()
+    base = {"section_id": 1, "title": "Лимит", "price": 100, "item_type": "gift",
+            "limit_count": 1}
+
+    for bad in ["месяцев", "mоnth", "вечно", "1 месяц"]:
+        r = api.post("/api/pult/catalog", json={**base, "limit_period": bad})
+        assert r.status_code == 422, f"период {bad!r} не должен приниматься"
+
+    r = api.post("/api/pult/catalog", json={**base, "limit_period": "месяц"})
+    assert r.status_code == 201, r.text
+
+
+def test_item_can_be_created_and_edited_through_api(api):
+    """ФТ-АДМ.2: создание и редактирование позиции каталога.
+
+    Эндпоинты существовали, но интерфейс их не вызывал — в сверке с ТЗ
+    требование было отмечено выполненным, хотя формы в Пульте не было.
+    Тест закрепляет контракт, на который опирается форма."""
+    api.as_admin()
+    section_id = api.get("/api/sections").json()[0]["id"]
+    r = api.post("/api/pult/catalog", json={
+        "section_id": section_id, "title": "Сертификат в книжный", "price": 2500,
+        "item_type": "gift", "supplier": "ООО «Книги»", "category": "Подарки",
+        "description": "Электронный сертификат.", "limit_count": 2,
+        "limit_period": "месяц", "icon": "▣",
+    })
+    assert r.status_code == 201, r.text
+    item = r.json()
+
+    # форма читает эти поля при открытии на редактирование
+    for field in ("section_id", "category", "title", "price", "item_type", "supplier",
+                  "description", "conditions", "icon", "limit_count", "limit_period",
+                  "cap_amount", "needs_doc"):
+        assert field in item, f"ItemOut не отдаёт {field}, форма не сможет открыться"
+
+    r = api.put(f"/api/pult/catalog/{item['id']}", json={
+        "section_id": section_id, "title": "Сертификат в книжный магазин",
+        "price": 3000, "item_type": "gift", "limit_count": 1, "limit_period": "год",
+    })
+    assert r.status_code == 200, r.text
+    assert r.json()["price"] == 3000
+    assert r.json()["title"] == "Сертификат в книжный магазин"
+
+
+@pytest.mark.parametrize("path,body", [
+    ("/api/dms/refuse", {"value": True}),
+    ("/api/pult/catalog/1/archive", {"value": True}),
+    ("/api/pult/points/freeze/2", {"value": True}),
+    ("/api/pult/people/3/role", {"role": "vip"}),
+    ("/api/pult/promo/1/load", {"count": 25}),
+])
+def test_changing_operations_take_body_not_query(api, path, body):
+    """Дефект: восемь изменяющих операций принимали данные строкой запроса.
+    Для ответа на обращение и комментария согласования это означало текст
+    о сотруднике в логах сервера и обратного прокси. Исправлен сначала
+    один случай — остальные семь остались, пока не прошли по всему коду.
+
+    Тело теперь обязательно, а строка запроса не читается."""
+    api.as_admin()
+    assert api.post(path, json=body).status_code in (200, 201)
+
+
+def test_query_string_is_ignored_for_toggles(api):
+    """Значение переключателя берётся только из тела: строка запроса
+    не должна влиять на результат, иначе исправление было бы косметическим."""
+    api.as_admin()
+    item = next(i for i in api.get("/api/pult/catalog").json() if not i["archived"])
+
+    api.post(f"/api/pult/catalog/{item['id']}/archive", json={"value": True})
+    assert next(i["archived"] for i in api.get("/api/pult/catalog").json()
+                if i["id"] == item["id"]) is True
+
+    # пытаемся вернуть из архива строкой запроса — не должно подействовать
+    api.post(f"/api/pult/catalog/{item['id']}/archive?value=false", json={})
+    assert next(i["archived"] for i in api.get("/api/pult/catalog").json()
+                if i["id"] == item["id"]) is True, "значение не должно браться из строки запроса"
+
+
+def test_ticket_answer_is_saved_and_visible(api):
+    """Ответ на обращение содержит сведения о сотруднике: он должен уходить
+    телом запроса, сохраняться целиком и доходить до автора обращения."""
+    api.as_employee()
+    created = api.post("/api/tickets", json={
+        "topic": "Не пришёл промокод", "body": "Код не отобразился в заказе."}).json()
+
+    api.as_hr()
+    answer = "Код отправлен повторно на корпоративную почту"
+    r = api.post(f"/api/pult/tickets/{created['id']}/answer", json={"answer": answer})
+    assert r.status_code == 200, r.text
+    assert r.json()["answer"] == answer
+
+    api.as_employee()
+    mine = next(t for t in api.get("/api/tickets").json() if t["id"] == created["id"])
+    assert mine["answer"] == answer, "сотрудник должен видеть ответ целиком"

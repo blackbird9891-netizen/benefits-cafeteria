@@ -145,9 +145,10 @@ def update_item(item_id: int, payload: schemas.ItemIn, db: Session = Depends(get
 
 
 @router.post("/catalog/{item_id}/archive", response_model=schemas.ItemOut)
-def archive_item(item_id: int, value: bool = True, db: Session = Depends(get_db),
+def archive_item(item_id: int, payload: schemas.ToggleIn, db: Session = Depends(get_db),
                  actor: User = Depends(require_pult("catalog"))):
     """ФТ-КАТ.4: архивация скрывает позицию, сохраняя её в прежних заказах."""
+    value = payload.value
     item = db.get(CatalogItem, item_id)
     if not item:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Позиция не найдена")
@@ -260,9 +261,10 @@ def admin_spend(payload: schemas.SpendIn, db: Session = Depends(get_db),
 
 
 @router.post("/points/freeze/{user_id}")
-def freeze_points(user_id: int, value: bool = True, db: Session = Depends(get_db),
+def freeze_points(user_id: int, payload: schemas.ToggleIn, db: Session = Depends(get_db),
                   actor: User = Depends(require_pult("points"))):
     """ФТ-БАЛ.9: заморозка баллов сотрудника."""
+    value = payload.value
     user = db.get(User, user_id)
     if not user:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Сотрудник не найден")
@@ -365,9 +367,10 @@ def list_people(db: Session = Depends(get_db), actor: User = Depends(require_pul
 
 
 @router.post("/people/{user_id}/role")
-def change_role(user_id: int, role: str, db: Session = Depends(get_db),
+def change_role(user_id: int, payload: schemas.RoleIn, db: Session = Depends(get_db),
                 actor: User = Depends(require_admin)):
     """РОЛ.4: изменение роли фиксируется в журнале аудита."""
+    role = payload.role.value
     user = db.get(User, user_id)
     if not user:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Сотрудник не найден")
@@ -403,9 +406,10 @@ def list_promo(db: Session = Depends(get_db), actor: User = Depends(require_pult
 
 
 @router.post("/promo/{item_id}/load")
-def load_batch(item_id: int, count: int = 50, db: Session = Depends(get_db),
+def load_batch(item_id: int, payload: schemas.PromoLoadIn, db: Session = Depends(get_db),
                actor: User = Depends(require_pult("promo"))):
     """ФТ-СЕР.1: загрузка партии кодов."""
+    count = payload.count
     batch = db.scalar(select(PromoBatch).where(PromoBatch.item_id == item_id))
     if not batch:
         batch = PromoBatch(item_id=item_id, total=0, used=0)
@@ -469,8 +473,9 @@ def admin_tickets(db: Session = Depends(get_db), actor: User = Depends(require_p
 
 
 @router.post("/tickets/{ticket_id}/answer", response_model=schemas.TicketOut)
-def answer_ticket(ticket_id: int, answer: str, db: Session = Depends(get_db),
+def answer_ticket(ticket_id: int, payload: schemas.AnswerIn, db: Session = Depends(get_db),
                   actor: User = Depends(require_pult("support"))):
+    answer = payload.answer
     ticket = db.get(Ticket, ticket_id)
     if not ticket:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Обращение не найдено")

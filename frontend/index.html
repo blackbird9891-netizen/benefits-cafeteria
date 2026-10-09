@@ -348,6 +348,16 @@ const API = {
     return data;
   },
 
+  // Файл нельзя забрать обычной ссылкой: <a href> не отправляет заголовок
+  // авторизации, и сервер ответит 401. Забираем запросом и отдаём из Blob.
+  async blob(path) {
+    const headers = {};
+    if (this.token) headers['Authorization'] = 'Bearer ' + this.token;
+    const res = await fetch(this.base + path, {headers});
+    if (!res.ok) throw new Error(`Не удалось получить файл (${res.status})`);
+    return res.blob();
+  },
+
   get(p) { return this.call(p); },
   post(p, body) { return this.call(p, {method: 'POST', body}); },
   put(p, body) { return this.call(p, {method: 'PUT', body}); },
@@ -776,7 +786,7 @@ async function scrCatalog() {
     + '<button class="btn btn-s" onclick="F={q:\'\',section:\'all\',type:\'all\',max:\'\'};render()">Сбросить</button>'
     + '</div><div class="chips" style="margin-top:var(--sp-4)">'
     + `<button class="chip${F.section === 'all' ? ' on' : ''}" onclick="F.section='all';render()">Все разделы</button>`
-    + sections.map(s => `<button class="chip${F.section === s.code ? ' on' : ''}" onclick="F.section='${s.code}';render()">${s.icon} ${esc(s.title)}</button>`).join('')
+    + sections.map(s => `<button class="chip${F.section === s.code ? ' on' : ''}" onclick="F.section='${s.code}';render()">${esc(s.icon)} ${esc(s.title)}</button>`).join('')
     + '</div></div>';
 
   if (!items.length) return h + '<div class="card"><div class="empty">Ничего не найдено. Измените параметры поиска.</div></div>';
@@ -785,17 +795,17 @@ async function scrCatalog() {
     const group = items.filter(i => i.section_id === s.id);
     if (!group.length) return;
     const cats = [...new Set(group.map(i => i.category))];
-    h += `<div class="sec"><div class="sec-h"><h2>${s.icon} ${esc(s.title)}</h2>`
+    h += `<div class="sec"><div class="sec-h"><h2>${esc(s.icon)} ${esc(s.title)}</h2>`
       + `<span class="sub">${group.length} ${plural(group.length, 'позиция', 'позиции', 'позиций')} · ${cats.map(esc).join(' · ')}</span></div><div class="shelf">`;
     group.forEach(it => {
       const inCart = CART.find(c => c.item_id === it.id);
       const low = it.available_stock !== null && it.available_stock <= it.low_at;
       h += `<div class="item" onclick="openItem(${it.id})">`
-        + `<div class="item-im">${it.icon}</div><div class="item-b">`
+        + `<div class="item-im">${esc(it.icon)}</div><div class="item-b">`
         + `<div class="item-t">${esc(it.title)}</div>`
         + `<div class="item-m">${esc(it.category)} · ${esc(it.supplier)}</div>`
         + '<div class="row" style="gap:5px">'
-        + `<span class="tag">${TYPE_LABEL[it.item_type] || it.item_type}</span>`
+        + `<span class="tag">${TYPE_LABEL[it.item_type] || esc(it.item_type)}</span>`
         + (it.approvals ? '<span class="tag tag-i">согласование</span>' : '')
         + (it.needs_doc ? '<span class="tag tag-w">по документам</span>' : '')
         + '</div><div class="item-f">'
@@ -832,6 +842,7 @@ function renderModal() {
   else if (MOD.kind === 'ticket') inner = modTicket();
   else if (MOD.kind === 'grant') inner = modGrant();
   else if (MOD.kind === 'decision') inner = modDecision();
+  else if (MOD.kind === 'item-form') inner = modItemForm();
   root.innerHTML = `<div class="ovl" onclick="if(event.target===this)closeModal()"><div class="modal">${inner}</div></div>`;
 }
 
@@ -860,13 +871,13 @@ function modItem() {
   else if (it.needs_doc && !o.doc) need = 'прикрепите подтверждающий документ';
   else if (it.item_type === 'dms-family' && !(o.fio && o.bd && o.rel)) need = 'заполните данные застрахованного';
 
-  let h = `<div class="modal-h"><div class="li-ic" style="font-size:15px">${it.icon}</div>`
+  let h = `<div class="modal-h"><div class="li-ic" style="font-size:15px">${esc(it.icon)}</div>`
     + `<div><h2>${esc(it.title)}</h2><div class="hint">${esc(it.category)} · ${esc(it.supplier)}</div></div>`
     + '<button class="x" onclick="closeModal()">✕</button></div><div class="modal-b">';
 
   h += '<div class="row" style="gap:6px;margin-bottom:var(--sp-4)">'
-    + `<span class="tag tag-a">${TYPE_LABEL[it.item_type] || it.item_type}</span>`
-    + (it.limit_count ? `<span class="tag">не более ${it.limit_count} за ${it.limit_period}</span>` : '')
+    + `<span class="tag tag-a">${TYPE_LABEL[it.item_type] || esc(it.item_type)}</span>`
+    + (it.limit_count ? `<span class="tag">не более ${it.limit_count} за ${esc(it.limit_period)}</span>` : '')
     + (it.approvals ? `<span class="tag tag-i">согласование: ${it.approvals.join(', ')}</span>` : '')
     + (it.available_stock !== null ? `<span class="tag${it.available_stock <= it.low_at ? ' tag-w' : ''}">${it.seats !== null ? 'мест' : 'в наличии'}: ${it.available_stock}</span>` : '')
     + '</div>';
@@ -1142,7 +1153,7 @@ async function scrHealth() {
   exts.forEach(it => {
     const on = (dms && (dms.extensions || []).includes(it.id));
     h += `<div class="item" onclick="${on ? "toast('Расширение уже подключено')" : `openItem(${it.id})`}">`
-      + `<div class="item-im">${it.icon}</div><div class="item-b"><div class="item-t">${esc(it.title)}</div>`
+      + `<div class="item-im">${esc(it.icon)}</div><div class="item-b"><div class="item-t">${esc(it.title)}</div>`
       + `<div class="item-m">${esc(it.supplier)}</div><div class="item-f">${money(it.price)}`
       + (on ? '<span class="tag tag-g">подключено</span>' : '') + '</div></div></div>';
   });
@@ -1163,7 +1174,7 @@ async function scrHealth() {
 
 async function dmsRefuse(value) {
   try {
-    await API.post(`/api/dms/refuse?value=${value}`);
+    await API.post('/api/dms/refuse', {value});
     await render();
     toast(value ? 'Отказ оформлен, баллы остаются доступными' : 'Базовый ДМС восстановлен');
   } catch (e) { toast(e.message, true); }
@@ -1296,7 +1307,7 @@ async function scrSurvey() {
 }
 
 async function vote(id, choice) {
-  try { await API.post(`/api/surveys/${id}/vote?choice=${choice}`); await render(); toast('Голос учтён'); }
+  try { await API.post(`/api/surveys/${id}/vote`, {choice}); await render(); toast('Голос учтён'); }
   catch (e) { toast(e.message, true); }
 }
 
@@ -1381,17 +1392,104 @@ async function scrDash() {
   return h;
 }
 
+/* ---------- АДМ-02: создание и редактирование позиции каталога ---------- */
+
+function openItemForm(id) {
+  const it = id ? (CACHE.items || []).find(x => x.id === id) : null;
+  MOD = {
+    kind: 'item-form', id: id || null,
+    f: it ? {
+      section_id: it.section_id, category: it.category || '', title: it.title,
+      price: it.price || 0, item_type: it.item_type, supplier: it.supplier || '',
+      description: it.description || '', conditions: it.conditions || '',
+      icon: it.icon || '▣', limit_count: it.limit_count || '',
+      limit_period: it.limit_period || '', cap_amount: it.cap_amount || '',
+      needs_doc: !!it.needs_doc,
+    } : {
+      section_id: (CACHE.sections || [{}])[0].id, category: '', title: '', price: 0,
+      item_type: 'gift', supplier: '', description: '', conditions: '', icon: '▣',
+      limit_count: '', limit_period: '', cap_amount: '', needs_doc: false,
+    },
+  };
+  renderModal();
+}
+
+function modItemForm() {
+  const f = MOD.f;
+  const sections = CACHE.sections || [];
+  const periods = ['день', 'неделя', 'месяц', 'квартал', 'год'];
+  const sel = (v, cur) => v === String(cur) ? ' selected' : '';
+  return `<div class="modal-h"><h2>${MOD.id ? 'Изменение позиции' : 'Новая позиция каталога'}</h2>`
+    + '<button class="x" onclick="closeModal()">✕</button></div><div class="modal-b">'
+    + `<label class="f">Название<input class="inp" maxlength="255" value="${esc(f.title)}" oninput="MOD.f.title=this.value"></label>`
+    + '<div class="grid g2" style="margin-top:var(--sp-3)">'
+    + '<label class="f">Раздел витрины<select class="inp" onchange="MOD.f.section_id=Number(this.value)">'
+    + sections.map(x => `<option value="${x.id}"${sel(String(x.id), f.section_id)}>${esc(x.title)}</option>`).join('')
+    + '</select></label>'
+    + '<label class="f">Тип позиции<select class="inp" onchange="MOD.f.item_type=this.value">'
+    + Object.entries(TYPE_LABEL).map(([k, v]) => `<option value="${k}"${sel(k, f.item_type)}>${v}</option>`).join('')
+    + '</select></label></div>'
+    + '<div class="grid g2" style="margin-top:var(--sp-3)">'
+    + `<label class="f">Стоимость в баллах<input class="inp" type="number" min="0" step="100" value="${f.price}" oninput="MOD.f.price=Number(this.value)||0"></label>`
+    + `<label class="f">Категория<input class="inp" maxlength="128" value="${esc(f.category)}" oninput="MOD.f.category=this.value"></label></div>`
+    + '<div class="grid g2" style="margin-top:var(--sp-3)">'
+    + `<label class="f">Поставщик<input class="inp" maxlength="255" value="${esc(f.supplier)}" oninput="MOD.f.supplier=this.value"></label>`
+    + `<label class="f">Значок<input class="inp" maxlength="8" value="${esc(f.icon)}" oninput="MOD.f.icon=this.value"></label></div>`
+    + `<label class="f" style="margin-top:var(--sp-3)">Описание<textarea class="inp" maxlength="4000" oninput="MOD.f.description=this.value">${esc(f.description)}</textarea></label>`
+    + `<label class="f" style="margin-top:var(--sp-3)">Условия получения<textarea class="inp" maxlength="4000" oninput="MOD.f.conditions=this.value">${esc(f.conditions)}</textarea></label>`
+    + '<div class="grid g3" style="margin-top:var(--sp-3)">'
+    + `<label class="f">Лимит, раз<input class="inp" type="number" min="0" value="${f.limit_count}" oninput="MOD.f.limit_count=this.value"></label>`
+    + '<label class="f">За период<select class="inp" onchange="MOD.f.limit_period=this.value">'
+    + '<option value="">не ограничен</option>'
+    + periods.map(x => `<option value="${x}"${sel(x, f.limit_period)}>${x}</option>`).join('')
+    + '</select></label>'
+    + `<label class="f">Предел суммы, ₽<input class="inp" type="number" min="0" step="500" value="${f.cap_amount}" oninput="MOD.f.cap_amount=this.value"></label></div>`
+    + `<div class="row" style="margin-top:var(--sp-4)"><label class="sw"><input type="checkbox" ${f.needs_doc ? 'checked' : ''} onchange="MOD.f.needs_doc=this.checked"><i></i>Требуется подтверждающий документ</label></div>`
+    + '<div class="note" style="margin-top:var(--sp-4)">Тип позиции определяет её поведение при оформлении: запись на время, подтверждающие документы, выдачу промокода. Период лимита выбирается из списка — произвольное значение сервер отклонит.</div>'
+    + '</div><div class="modal-f"><button class="btn" onclick="closeModal()">Отмена</button>'
+    + `<button class="btn btn-pri" onclick="saveItem()">${MOD.id ? 'Сохранить' : 'Создать'}</button></div>`;
+}
+
+async function saveItem() {
+  const f = MOD.f;
+  if (!f.title.trim()) return toast('Укажите название позиции', true);
+  if (!f.section_id) return toast('Выберите раздел витрины', true);
+  if (f.limit_count && !f.limit_period) return toast('Для лимита укажите период', true);
+  const body = {
+    section_id: f.section_id, category: f.category.trim(), title: f.title.trim(),
+    price: Number(f.price) || 0, item_type: f.item_type, supplier: f.supplier.trim(),
+    description: f.description.trim(), conditions: f.conditions.trim(),
+    icon: f.icon.trim() || '▣', needs_doc: !!f.needs_doc,
+    limit_count: f.limit_count ? Number(f.limit_count) : null,
+    limit_period: f.limit_period || null,
+    cap_amount: f.cap_amount ? Number(f.cap_amount) : null,
+  };
+  try {
+    if (MOD.id) await API.put(`/api/pult/catalog/${MOD.id}`, body);
+    else await API.post('/api/pult/catalog', body);
+    closeModal();
+    await render();
+    toast(MOD.id ? 'Позиция изменена' : 'Позиция создана');
+  } catch (e) { toast(e.message, true); }
+}
+
 async function scrACatalog() {
-  const items = await API.get('/api/pult/catalog');
-  let h = pageHead('Каталог и витрина', `${items.length} позиций`);
+  const [items, sections] = await Promise.all([
+    API.get('/api/pult/catalog'), API.get('/api/sections'),
+  ]);
+  CACHE.items = items;
+  CACHE.sections = sections;
+  let h = pageHead('Каталог и витрина', `${items.length} позиций`,
+    '<button class="btn btn-pri" onclick="openItemForm()">Новая позиция</button>');
   h += '<div class="tbl-wrap"><table><thead><tr><th>Позиция</th><th>Тип</th><th class="r">Цена</th><th>Лимит</th><th>Остаток</th><th></th></tr></thead><tbody>';
   items.forEach(it => {
     h += `<tr${it.archived ? ' style="opacity:.55"' : ''}><td><b>${esc(it.title)}</b><div class="hint">${esc(it.category)} · ${esc(it.supplier)}</div></td>`
-      + `<td><span class="tag">${TYPE_LABEL[it.item_type] || it.item_type}</span></td>`
+      + `<td><span class="tag">${TYPE_LABEL[it.item_type] || esc(it.item_type)}</span></td>`
       + `<td class="r num">${it.price ? fmt(it.price) : '—'}</td>`
-      + `<td class="hint">${it.limit_count ? it.limit_count + ' / ' + it.limit_period : '—'}${it.cap_amount ? '<br>предел ' + fmt(it.cap_amount) : ''}</td>`
+      + `<td class="hint">${it.limit_count ? it.limit_count + ' / ' + esc(it.limit_period) : '—'}${it.cap_amount ? '<br>предел ' + fmt(it.cap_amount) : ''}</td>`
       + `<td class="num">${it.available_stock !== null ? (it.available_stock <= it.low_at ? `<span class="tag tag-w">${it.available_stock}</span>` : it.available_stock) : '—'}</td>`
       + '<td class="r" style="white-space:nowrap">'
+      + `<button class="btn btn-s" onclick="openItemForm(${it.id})">Изменить</button> `
       + `<button class="btn btn-s" onclick="archiveItem(${it.id},${!it.archived})">${it.archived ? 'Вернуть' : 'В архив'}</button> `
       + `<button class="btn btn-s btn-dng" onclick="deleteItem(${it.id})">Удалить</button></td></tr>`;
   });
@@ -1401,7 +1499,7 @@ async function scrACatalog() {
 }
 
 async function archiveItem(id, value) {
-  try { await API.post(`/api/pult/catalog/${id}/archive?value=${value}`); await render(); toast(value ? 'Позиция убрана из витрины' : 'Позиция возвращена'); }
+  try { await API.post(`/api/pult/catalog/${id}/archive`, {value}); await render(); toast(value ? 'Позиция убрана из витрины' : 'Позиция возвращена'); }
   catch (e) { toast(e.message, true); }
 }
 
@@ -1499,7 +1597,7 @@ async function doGrant() {
 }
 
 async function freezePoints(id, value) {
-  try { await API.post(`/api/pult/points/freeze/${id}?value=${value}`); await render(); toast(value ? 'Баллы заморожены' : 'Баллы разморожены'); }
+  try { await API.post(`/api/pult/points/freeze/${id}`, {value}); await render(); toast(value ? 'Баллы заморожены' : 'Баллы разморожены'); }
   catch (e) { toast(e.message, true); }
 }
 </script>
@@ -1622,7 +1720,7 @@ async function scrAPeople() {
 }
 
 async function setRole(id, role) {
-  try { await API.post(`/api/pult/people/${id}/role?role=${role}`); await render(); toast('Роль изменена'); }
+  try { await API.post(`/api/pult/people/${id}/role`, {role}); await render(); toast('Роль изменена'); }
   catch (e) { toast(e.message, true); await render(); }
 }
 
@@ -1648,7 +1746,7 @@ async function scrAPromo() {
 }
 
 async function loadBatch(id) {
-  try { await API.post(`/api/pult/promo/${id}/load?count=50`); await render(); toast('Загружено 50 кодов'); }
+  try { await API.post(`/api/pult/promo/${id}/load`, {count: 50}); await render(); toast('Загружено 50 кодов'); }
   catch (e) { toast(e.message, true); }
 }
 
@@ -1669,14 +1767,39 @@ async function scrASupport() {
 
 async function answerTicket(id) {
   const text = 'Обращение обработано, решение направлено сотруднику.';
-  try { await API.post(`/api/pult/tickets/${id}/answer?answer=${encodeURIComponent(text)}`); await render(); toast('Обращение закрыто'); }
+  try { await API.post(`/api/pult/tickets/${id}/answer`, {answer: text}); await render(); toast('Обращение закрыто'); }
   catch (e) { toast(e.message, true); }
+}
+
+// Выгрузка закрыта авторизацией, а обычная ссылка <a href> заголовков
+// не отправляет — браузер получал бы 401 вместо файла. Поэтому запрос
+// идёт через API с токеном, а файл отдаётся пользователю из Blob.
+async function downloadCsv(btn) {
+  const was = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Готовим файл…';
+  try {
+    const url = URL.createObjectURL(await API.blob('/api/pult/export.csv'));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'cafeteria-export.csv';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast('Файл выгрузки скачан');
+  } catch (e) {
+    toast(e.message, true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = was;
+  }
 }
 
 async function scrAExport() {
   const d = await API.get('/api/pult/export');
   let h = pageHead('Выгрузка в бухгалтерию', `${d.rows.length} строк · сумма ${fmt(d.total_rub)} ₽`,
-    '<a class="btn btn-pri" href="/api/pult/export.csv" download>Скачать CSV</a>');
+    '<button class="btn btn-pri" onclick="downloadCsv(this)">Скачать CSV</button>');
   h += '<div class="grid g3" style="margin-bottom:var(--sp-5)">'
     + kpi('Строк в выгрузке', String(d.rows.length), 'заказы, кроме отменённых')
     + kpi('Сумма к учёту', fmt(d.total_rub) + ' ₽', 'по стоимости балла из настроек')

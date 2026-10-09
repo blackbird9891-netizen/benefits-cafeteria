@@ -48,7 +48,7 @@ def test_archive_hides_item_from_catalog(api):
     """ФТ-КАТ.4: архивная позиция исчезает из витрины."""
     api.as_hr()
     item = api.get("/api/pult/catalog").json()[0]
-    api.post(f"/api/pult/catalog/{item['id']}/archive?value=true")
+    api.post(f"/api/pult/catalog/{item['id']}/archive", json={"value": True})
 
     api.as_employee()
     assert item["id"] not in [i["id"] for i in api.get("/api/catalog").json()]
@@ -162,7 +162,7 @@ def test_inform_mode_allows_checkout_outside_window(api):
 def test_promo_batch_load_increases_total(api):
     api.as_hr()
     batch = api.get("/api/pult/promo").json()["batches"][0]
-    r = api.post(f"/api/pult/promo/{batch['item_id']}/load?count=50")
+    r = api.post(f"/api/pult/promo/{batch['item_id']}/load", json={"count": 50})
     assert r.json()["total"] == batch["total"] + 50
 
 
@@ -246,7 +246,8 @@ def test_ticket_lifecycle(api):
 
     api.as_hr()
     answered = api.post(
-        f"/api/pult/tickets/{created['id']}/answer?answer=Ответ+направлен").json()
+        f"/api/pult/tickets/{created['id']}/answer",
+                    json={"answer": "Ответ направлен"}).json()
     assert answered["status"] == "closed"
     assert answered["answer"]
 

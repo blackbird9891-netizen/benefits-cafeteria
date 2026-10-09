@@ -167,7 +167,7 @@ def test_item_limit_enforced(api):
 def test_frozen_points_block_checkout(api):
     """ФТ-БАЛ.9: при заморозке оформление невозможно."""
     api.as_admin()
-    api.post("/api/pult/points/freeze/1?value=true")
+    api.post("/api/pult/points/freeze/1", json={"value": True})
 
     api.as_employee()
     item = item_by_title(api, "Подарочная карта")

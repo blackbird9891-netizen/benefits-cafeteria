@@ -1,8 +1,11 @@
 """Схемы запросов и ответов."""
 
 from datetime import date, datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
+
+from app.models import ItemType, Role
 
 
 class ORMModel(BaseModel):
@@ -104,7 +107,9 @@ class ItemIn(BaseModel):
     category: str = Field(default="", max_length=128)
     title: str = Field(min_length=1, max_length=255)
     price: int = Field(default=0, ge=0)
-    item_type: str = Field(default="gift", max_length=32)
+    # Тип определяет поведение позиции: слоты, документы, промокоды, ДМС.
+    # Произвольная строка проходила бы мимо всех проверок оформления.
+    item_type: ItemType = ItemType.GIFT
     supplier: str = Field(default="", max_length=255)
     description: str = Field(default="", max_length=4000)
     conditions: str = Field(default="", max_length=4000)
@@ -114,7 +119,7 @@ class ItemIn(BaseModel):
     low_at: int = 5
     cap_amount: int | None = None
     limit_count: int | None = Field(default=None, ge=0)
-    limit_period: str | None = Field(default=None, max_length=32)
+    limit_period: Literal["день", "неделя", "месяц", "квартал", "год"] | None = None
     needs_doc: bool = False
     has_slots: bool = False
     approvals: list | None = None
@@ -170,6 +175,32 @@ class OrderOut(ORMModel):
     item_type: str = ""
     user_name: str = ""
     approvals_chain: list[ApprovalOut] = []
+
+
+class ToggleIn(BaseModel):
+    """Переключатель состояния: архив позиции, заморозка баллов, отказ от ДМС."""
+
+    value: bool = True
+
+
+class VoteIn(BaseModel):
+    choice: int = Field(ge=0)
+
+
+class RoleIn(BaseModel):
+    role: Role
+
+
+class PromoLoadIn(BaseModel):
+    count: int = Field(default=50, ge=1, le=10000)
+
+
+class AnswerIn(BaseModel):
+    """Ответ на обращение. Текст адресован конкретному сотруднику и может
+    содержать сведения о нём, поэтому идёт телом, а не строкой запроса:
+    строка запроса попадает в логи сервера и обратного прокси."""
+
+    answer: str = Field(min_length=1, max_length=4000)
 
 
 class DecisionIn(BaseModel):

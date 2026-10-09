@@ -90,15 +90,15 @@ def test_employee_cannot_reach_pult(api):
 def test_only_admin_changes_roles(api):
     """РОЛ.4: смена роли — операция администратора."""
     api.as_hr()
-    assert api.post("/api/pult/people/1/role?role=admin").status_code == 403
+    assert api.post("/api/pult/people/1/role", json={"role": "admin"}).status_code == 403
 
     api.as_admin()
-    assert api.post("/api/pult/people/3/role?role=vip").status_code == 200
+    assert api.post("/api/pult/people/3/role", json={"role": "vip"}).status_code == 200
 
 
 def test_role_change_is_audited(api):
     api.as_admin()
-    api.post("/api/pult/people/3/role?role=vip")
+    api.post("/api/pult/people/3/role", json={"role": "vip"})
     actions = [r["action"] for r in api.get("/api/pult/audit").json()]
     assert "Изменение роли" in actions
 
