@@ -828,6 +828,7 @@ function renderModal() {
   if (MOD.kind === 'item') inner = modItem();
   else if (MOD.kind === 'ticket') inner = modTicket();
   else if (MOD.kind === 'grant') inner = modGrant();
+  else if (MOD.kind === 'decision') inner = modDecision();
   root.innerHTML = `<div class="ovl" onclick="if(event.target===this)closeModal()"><div class="modal">${inner}</div></div>`;
 }
 
@@ -1026,7 +1027,7 @@ function ordersTable(list, withActions) {
       + (o.note ? `<div class="hint" style="margin-top:3px">${esc(o.note)}</div>` : '')
       + `</td><td><b>${esc(o.item_title)}</b><div class="hint">${TYPE_LABEL[o.item_type] || ''}</div>`
       + (o.approvals_chain && o.approvals_chain.length
-        ? `<div class="hint" style="margin-top:3px">${o.approvals_chain.map(a => a.approver + ': ' + (a.result === true ? 'согласовано' : a.result === false ? 'отклонено' : 'ожидает')).join(' · ')}</div>` : '')
+        ? `<div class="hint" style="margin-top:3px">${o.approvals_chain.map(a => a.approver + ': ' + (a.result === true ? 'согласовано' : a.result === false ? 'отклонено' : 'ожидает') + (a.comment ? ' — ' + esc(a.comment) : '')).join(' · ')}</div>` : '')
       + (bits.length ? `<div class="hint">${esc(bits.join(' · '))}</div>` : '')
       + `</td><td class="r num">${o.price ? fmt(o.price) : '—'}</td>`
       + `<td class="num">${dtt(o.created_at)}</td>`
@@ -1526,8 +1527,9 @@ async function toggleCamp(id) {
 let OF = 'all';
 
 async function scrAOrders() {
-  const orders = await API.get('/api/pult/orders' + (OF !== 'all' ? '?status_filter=' + OF : ''));
   const all = await API.get('/api/pult/orders');
+  CACHE.orders = all;
+  const orders = OF === 'all' ? all : all.filter(o => o.status === OF);
   let h = pageHead('Заказы и согласования', `${all.length} записей всего`);
   h += '<div class="chips" style="margin-bottom:14px">'
     + `<button class="chip${OF === 'all' ? ' on' : ''}" onclick="OF='all';render()">Все</button>`
@@ -1543,12 +1545,12 @@ async function scrAOrders() {
       + `<td>${esc(o.item_title)}<div class="hint">${TYPE_LABEL[o.item_type] || ''}</div></td>`
       + `<td class="r num">${o.price ? fmt(o.price) : '—'}</td>`
       + `<td>${o.approvals_chain && o.approvals_chain.length
-          ? o.approvals_chain.map(a => `<div class="hint">${a.approver}: ${a.result === true ? '<span style="color:var(--good)">согласовано</span>' : a.result === false ? '<span style="color:var(--crit)">отклонено</span>' : 'ожидает'}</div>`).join('')
+          ? o.approvals_chain.map(a => `<div class="hint">${a.approver}: ${a.result === true ? '<span style="color:var(--good)">согласовано</span>' : a.result === false ? '<span style="color:var(--crit)">отклонено</span>' : 'ожидает'}${a.comment ? '<br>' + esc(a.comment) : ''}</div>`).join('')
           : '<span class="hint">не требуется</span>'}</td>`
       + `<td><span class="tag ${STATUS[o.status].c}">${STATUS[o.status].t}</span></td>`
       + '<td class="r" style="white-space:nowrap">'
       + (o.status === 'approve'
-        ? `<button class="btn btn-s btn-pri" onclick="decide(${o.id},true)">Согласовать</button> <button class="btn btn-s btn-dng" onclick="decide(${o.id},false)">Отклонить</button>`
+        ? `<button class="btn btn-s btn-pri" onclick="askDecision(${o.id},true)">Согласовать</button> <button class="btn btn-s btn-dng" onclick="askDecision(${o.id},false)">Отклонить</button>`
         : o.status === 'work' ? `<button class="btn btn-s" onclick="completeOrder(${o.id})">Отметить выполненным</button>`
         : '<span class="hint">—</span>')
       + '</td></tr>';
@@ -1557,8 +1559,33 @@ async function scrAOrders() {
     + '<div class="hint" style="margin-top:10px">Маршрут согласования строится по руководителю сотрудника. При отклонении баллы возвращаются автоматически.</div>';
 }
 
-async function decide(id, approved) {
-  try { await API.post(`/api/pult/orders/${id}/decide?approved=${approved}`); await render(); toast(approved ? 'Заказ согласован' : 'Заказ отклонён, баллы возвращены'); }
+function askDecision(id, approved) {
+  const o = (CACHE.orders || []).find(x => x.id === id);
+  MOD = {kind: 'decision', id, approved, title: o ? o.item_title : '', who: o ? o.user_name : '', comment: ''};
+  renderModal();
+}
+
+function modDecision() {
+  const ok = MOD.approved;
+  return `<div class="modal-h"><h2>${ok ? 'Согласование заявки' : 'Отклонение заявки'}</h2>`
+    + '<button class="x" onclick="closeModal()">✕</button></div><div class="modal-b">'
+    + `<div class="f" style="margin-bottom:11px">${esc(MOD.title)}<br><span class="mut">${esc(MOD.who)}</span></div>`
+    + `<label class="f">Комментарий${ok ? ' (необязательно)' : ' (обязательно)'}`
+    + `<textarea class="inp" oninput="MOD.comment=this.value" placeholder="${ok ? 'Основание решения' : 'Причина отказа — сотрудник увидит её в заявке'}">${esc(MOD.comment)}</textarea></label>`
+    + `<div class="note ${ok ? '' : 'note-w'}" style="margin-top:11px">`
+    + (ok ? 'Решение и время фиксируются в цепочке согласования и в журнале аудита.'
+          : 'Баллы вернутся сотруднику автоматически. Решение фиксируется в журнале аудита.')
+    + '</div></div><div class="modal-f"><button class="btn" onclick="closeModal()">Отмена</button>'
+    + `<button class="btn ${ok ? 'btn-pri' : 'btn-dng'}" onclick="doDecide()">`
+    + `${ok ? 'Согласовать' : 'Отклонить'}</button></div>`;
+}
+
+async function doDecide() {
+  if (!MOD.approved && !MOD.comment.trim()) return toast('Укажите причину отказа', true);
+  const approved = MOD.approved;
+  // Решение уходит телом запроса: комментарий содержит сведения о сотруднике,
+  // а строка запроса попадает в логи сервера и обратного прокси.
+  try { await API.post(`/api/pult/orders/${MOD.id}/decide`, {approved, comment: MOD.comment.trim()}); closeModal(); await render(); toast(approved ? 'Заказ согласован' : 'Заказ отклонён, баллы возвращены'); }
   catch (e) { toast(e.message, true); }
 }
 

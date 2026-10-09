@@ -287,9 +287,10 @@ def admin_orders(status_filter: str | None = None, limit: int = 200, offset: int
 
 
 @router.post("/orders/{order_id}/decide", response_model=schemas.OrderOut)
-def decide_order(order_id: int, approved: bool, comment: str = "",
+def decide_order(order_id: int, payload: schemas.DecisionIn,
                  db: Session = Depends(get_db), actor: User = Depends(require_pult("orders"))):
     """ФТ-ЗАК.4: согласование с фиксацией решения, времени и комментария."""
+    approved, comment = payload.approved, payload.comment
     order = db.get(Order, order_id)
     if not order:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Заказ не найден")
@@ -320,7 +321,9 @@ def decide_order(order_id: int, approved: bool, comment: str = "",
 
     pts.write_audit(db, actor.full_name,
                     "Согласование заявки" if approved else "Отклонение заявки",
-                    f"{order.public_id} ({order.item.title}), сотрудник {order.user.full_name}")
+                    f"{order.public_id} ({order.item.title}), "
+                    f"сотрудник {order.user.full_name}"
+                    + (f". Комментарий: {comment}" if comment else ""))
     db.commit()
     db.refresh(order)
     return order_out(order)

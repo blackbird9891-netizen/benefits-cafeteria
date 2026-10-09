@@ -172,6 +172,18 @@ class OrderOut(ORMModel):
     approvals_chain: list[ApprovalOut] = []
 
 
+class DecisionIn(BaseModel):
+    """Решение по заявке передаётся телом, а не строкой запроса.
+
+    Комментарий согласующего — это текст о конкретном человеке («отказано,
+    сотрудник на испытательном сроке»). В строке запроса он попал бы в логи
+    сервера, обратного прокси и хостинга, откуда его никто не удалит.
+    """
+
+    approved: bool
+    comment: str = Field(default="", max_length=2000)
+
+
 class CartLine(BaseModel):
     item_id: int
     options: dict = {}

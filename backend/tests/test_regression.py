@@ -160,3 +160,60 @@ def test_valid_item_still_passes(api):
         "description": "Электронный сертификат, срок действия год.",
     })
     assert r.status_code == 201, r.text
+
+
+def test_decision_comment_goes_in_body_not_query(api):
+    """Дефект: решение по заявке принималось строкой запроса
+    (`?approved=false&comment=...`). Комментарий согласующего — это текст
+    о конкретном человеке, а строка запроса пишется в логи сервера,
+    обратного прокси и хостинга, откуда её никто не удаляет."""
+    api.as_admin()
+    api.post("/api/pult/points/grant",
+             json={"user_id": 1, "amount": 30000, "reason": "под тест", "burnable": True})
+
+    api.as_employee()
+    item = next(i for i in api.get("/api/catalog").json()
+                if i.get("approvals") and not i["needs_doc"] and not i["has_slots"]
+                and i["item_type"] not in ("vac", "dms-family"))
+    order = api.post("/api/checkout",
+                     json={"lines": [{"item_id": item["id"], "options": {}}]}).json()["orders"][0]
+
+    api.as_hr()
+    # Старый способ больше не работает: тело обязательно.
+    assert api.post(f"/api/pult/orders/{order['id']}/decide?approved=false").status_code == 422
+
+    reason = "отказано: сотрудник на испытательном сроке"
+    r = api.post(f"/api/pult/orders/{order['id']}/decide",
+                 json={"approved": False, "comment": reason})
+    assert r.status_code == 200, r.text
+    assert r.json()["approvals_chain"][0]["comment"] == reason, "комментарий должен сохраниться"
+
+    api.as_admin()   # журнал аудита HR закрыт по матрице прав
+    audit = api.get("/api/pult/audit").json()
+    assert any(reason in (a["detail"] or "") for a in audit), "решение должно попасть в аудит"
+
+
+def test_decision_comment_length_is_limited(api):
+    """Комментарий пишется в текстовое поле модели — длину ограничивает схема,
+    иначе PostgreSQL отдаст 500 там, где нужен внятный отказ."""
+    api.as_admin()
+    api.post("/api/pult/points/grant",
+             json={"user_id": 1, "amount": 30000, "reason": "под тест", "burnable": True})
+
+    api.as_employee()
+    item = next(i for i in api.get("/api/catalog").json()
+                if i.get("approvals") and not i["needs_doc"] and not i["has_slots"]
+                and i["item_type"] not in ("vac", "dms-family"))
+    order = api.post("/api/checkout",
+                     json={"lines": [{"item_id": item["id"], "options": {}}]}).json()["orders"][0]
+
+    api.as_hr()
+    r = api.post(f"/api/pult/orders/{order['id']}/decide",
+                 json={"approved": True, "comment": "я" * 3000})
+    assert r.status_code == 422, f"ожидался отказ валидации, получено {r.status_code}"
+
+    # заявка должна остаться нерешённой
+    assert api.get("/api/pult/orders").json(), "список заказов должен быть доступен"
+    chain = next(o for o in api.get("/api/pult/orders").json()
+                 if o["id"] == order["id"])["approvals_chain"]
+    assert chain[0]["result"] is None, "отклонённая валидация не должна менять заявку"

@@ -241,7 +241,8 @@ def test_approval_releases_order(api):
                      json={"lines": [{"item_id": item["id"], "options": {}}]}).json()["orders"][0]
 
     api.as_hr()
-    r = api.post(f"/api/pult/orders/{order['id']}/decide?approved=true")
+    r = api.post(f"/api/pult/orders/{order['id']}/decide",
+                 json={"approved": True})
     assert r.status_code == 200
     assert r.json()["status"] == "work"
     assert r.json()["approvals_chain"][0]["result"] is True
@@ -262,7 +263,8 @@ def test_rejection_refunds_points(api):
     assert balance(api)["available"] == before - item["price"]
 
     api.as_hr()
-    api.post(f"/api/pult/orders/{order['id']}/decide?approved=false")
+    api.post(f"/api/pult/orders/{order['id']}/decide",
+                 json={"approved": False, "comment": "бюджет подразделения исчерпан"})
 
     api.as_employee()
     assert balance(api)["available"] == before, "при отклонении баллы возвращаются"
@@ -275,7 +277,8 @@ def test_cannot_approve_own_request(api):
     order = api.post("/api/checkout",
                      json={"lines": [{"item_id": item["id"], "options": {}}]}).json()["orders"][0]
 
-    r = api.post(f"/api/pult/orders/{order['id']}/decide?approved=true")
+    r = api.post(f"/api/pult/orders/{order['id']}/decide",
+                 json={"approved": True})
     assert r.status_code == 403
     assert "собственную" in r.json()["detail"]
 
@@ -287,5 +290,6 @@ def test_decide_rejects_wrong_status(api):
                      json={"lines": [{"item_id": item["id"], "options": {}}]}).json()["orders"][0]
 
     api.as_hr()
-    r = api.post(f"/api/pult/orders/{order['id']}/decide?approved=true")
+    r = api.post(f"/api/pult/orders/{order['id']}/decide",
+                 json={"approved": True})
     assert r.status_code == 409
