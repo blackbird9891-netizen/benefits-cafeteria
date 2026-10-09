@@ -19,4 +19,9 @@ services:
         generateValue: true
       - key: CORS_ORIGINS
         value: "*"
+      # Стенд демонстрационный: эндпоинт со списком учётных записей открыт
+      # намеренно, иначе зайти в него будет нечем. Объявлено явно, чтобы
+      # не зависеть от значения по умолчанию в коде.
+      - key: DEMO_MODE
+        value: "1"
     healthCheckPath: /api/health
