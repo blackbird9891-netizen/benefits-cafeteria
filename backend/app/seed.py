@@ -191,9 +191,14 @@ def run_seed(force: bool = False) -> None:
     Base.metadata.create_all(engine)
     db: Session = SessionLocal()
     try:
-        if db.scalar(select(User).limit(1)) and not force:
-            print("База уже заполнена, пропускаю.")
-            return
+        if db.scalar(select(User).limit(1)):
+            if not force:
+                print("База уже заполнена, пропускаю.")
+                return
+            # Иначе получили бы дубли поверх существующих данных.
+            for table in reversed(Base.metadata.sorted_tables):
+                db.execute(table.delete())
+            db.flush()
 
         sections = {}
         for code, title, icon, order in SECTIONS:

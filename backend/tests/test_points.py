@@ -154,3 +154,36 @@ def test_audit_written_on_grant_and_spend(db_session, user):
 def test_add_months_handles_month_ends(start, months, expected):
     """Конец месяца и високосный год — классический источник ошибок."""
     assert pts.add_months(start, months) == expected
+
+
+def test_group_balance_matches_single(db_session):
+    """Групповой расчёт не должен расходиться с поштучным.
+
+    Оптимизация ради одного запроса вместо N — классическое место,
+    где появляется расхождение в арифметике.
+    """
+    from datetime import date, timedelta
+
+    users = []
+    for i in range(3):
+        u = User(email=f"g{i}@corp.example", hashed_password="x", full_name=f"Групп {i}")
+        db_session.add(u)
+        users.append(u)
+    db_session.flush()
+
+    today = date.today()
+    pts.grant(db_session, users[0], 1000, "сгораемые")
+    pts.grant(db_session, users[0], 500, "несгораемые", burnable=False)
+    pts.grant(db_session, users[1], 300, "просрочен", granted_at=today - timedelta(days=400),
+              burn_at=today - timedelta(days=1))
+    users[2].points_frozen = True
+    pts.grant(db_session, users[2], 700, "заморожен")
+    db_session.commit()
+
+    group = pts.balances_for(db_session, users)
+    for u in users:
+        assert group[u.id].__dict__ == pts.balance(db_session, u).__dict__, u.full_name
+
+
+def test_group_balance_handles_empty_list(db_session):
+    assert pts.balances_for(db_session, []) == {}

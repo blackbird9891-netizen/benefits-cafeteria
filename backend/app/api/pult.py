@@ -6,7 +6,7 @@
 
 import csv
 import io
-from datetime import date, datetime
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import func, select
@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from app import schemas
 from app.api.deps import ROLE_MATRIX, require_admin, require_pult
-from app.api.shop import available_stock, next_public_id, order_out
+from app.api.shop import available_stock, order_out
 from app.core import points as pts
 from app.database import get_db
 from app.models import (
@@ -23,9 +23,7 @@ from app.models import (
     Campaign,
     CatalogItem,
     ItemType,
-    NewsPost,
     Order,
-    OrderApproval,
     OrderStatus,
     PlatformSetting,
     PromoBatch,
@@ -46,14 +44,15 @@ GRADE_BUDGETS = {"G9": 5000, "G11": 6500, "G12": 8000, "G13": 9000, "G15": 11000
 def dashboard(db: Session = Depends(get_db), actor: User = Depends(require_pult("dash"))):
     """Агрегаты по всем сотрудникам. Лоты загружаются одним запросом,
     чтобы не делать отдельный SELECT на каждого."""
-    users = db.scalars(select(User).where(User.role != Role.EXCLUDED.value)).all()
+    users = list(db.scalars(select(User).where(User.role != Role.EXCLUDED.value)).all())
+    balances = pts.balances_for(db, users)
 
     totals = {"granted": 0, "spent": 0, "left": 0}
     by_dept: dict[str, dict] = {}
     mix = {"spent": 0, "burnable": 0, "permanent": 0}
 
     for u in users:
-        b = pts.balance(db, u)
+        b = balances[u.id]
         totals["granted"] += b.granted
         totals["spent"] += b.spent
         totals["left"] += b.burnable + b.permanent
@@ -181,10 +180,11 @@ def delete_item(item_id: int, db: Session = Depends(get_db),
 
 @router.get("/budgets")
 def list_budgets(db: Session = Depends(get_db), actor: User = Depends(require_pult("budget"))):
-    users = db.scalars(select(User).order_by(User.id)).all()
+    users = list(db.scalars(select(User).order_by(User.id)).all())
+    balances = pts.balances_for(db, users)
     rows = []
     for u in users:
-        b = pts.balance(db, u)
+        b = balances[u.id]
         rows.append({
             "user_id": u.id, "full_name": u.full_name, "department": u.department,
             "grade": u.grade, "budget": u.budget, "granted": b.granted,
@@ -347,9 +347,11 @@ def complete_order(order_id: int, db: Session = Depends(get_db),
 
 @router.get("/people")
 def list_people(db: Session = Depends(get_db), actor: User = Depends(require_pult("people"))):
+    users = list(db.scalars(select(User).order_by(User.id)).all())
+    balances = pts.balances_for(db, users)
     rows = []
-    for u in db.scalars(select(User).order_by(User.id)).all():
-        b = pts.balance(db, u)
+    for u in users:
+        b = balances[u.id]
         rows.append({
             "id": u.id, "full_name": u.full_name, "email": u.email, "position": u.position,
             "department": u.department, "grade": u.grade, "role": u.role,
@@ -522,11 +524,12 @@ def export_preview(db: Session = Depends(get_db), actor: User = Depends(require_
 
 @router.get("/export.csv")
 def export_csv(db: Session = Depends(get_db), actor: User = Depends(require_pult("export"))):
+    rows = export_rows(db)
     buffer = io.StringIO()
     writer = csv.writer(buffer, delimiter=";", quoting=csv.QUOTE_ALL)
     writer.writerow(EXPORT_COLUMNS)
-    writer.writerows(export_rows(db))
-    pts.write_audit(db, actor.full_name, "Выгрузка в бухгалтерию", f"{len(export_rows(db))} строк")
+    writer.writerows(rows)
+    pts.write_audit(db, actor.full_name, "Выгрузка в бухгалтерию", f"{len(rows)} строк")
     db.commit()
     return Response(
         content="﻿" + buffer.getvalue(),

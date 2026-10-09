@@ -76,9 +76,13 @@ def active_lots(db: Session, user_id: int) -> list[PointLot]:
     return [l for l in lots if l.remaining > 0 and (l.burn_at is None or l.burn_at > today)]
 
 
-def balance(db: Session, user: User) -> Balance:
+def balance_from_lots(all_lots: list[PointLot], frozen: bool = False) -> Balance:
+    """Расчёт по уже загруженным лотам.
+
+    Нужен там, где балансы считаются для многих сотрудников сразу:
+    лоты берутся одним запросом, а раскладка идёт в памяти.
+    """
     today = date.today()
-    all_lots = db.scalars(select(PointLot).where(PointLot.user_id == user.id)).all()
 
     burnable = sum(l.remaining for l in all_lots
                    if l.remaining > 0 and l.burnable and (l.burn_at is None or l.burn_at > today))
@@ -91,12 +95,32 @@ def balance(db: Session, user: User) -> Balance:
     return Balance(
         burnable=burnable,
         permanent=permanent,
-        available=0 if user.points_frozen else burnable + permanent,
+        available=0 if frozen else burnable + permanent,
         burned=burned,
         granted=granted,
         spent=spent,
-        frozen=user.points_frozen,
+        frozen=frozen,
     )
+
+
+def balance(db: Session, user: User) -> Balance:
+    """Баланс одного сотрудника."""
+    lots = db.scalars(select(PointLot).where(PointLot.user_id == user.id)).all()
+    return balance_from_lots(list(lots), user.points_frozen)
+
+
+def balances_for(db: Session, users: list[User]) -> dict[int, Balance]:
+    """Балансы группы сотрудников одним запросом вместо запроса на каждого."""
+    if not users:
+        return {}
+    ids = [u.id for u in users]
+    lots = db.scalars(select(PointLot).where(PointLot.user_id.in_(ids))).all()
+
+    by_user: dict[int, list[PointLot]] = {uid: [] for uid in ids}
+    for lot in lots:
+        by_user[lot.user_id].append(lot)
+
+    return {u.id: balance_from_lots(by_user[u.id], u.points_frozen) for u in users}
 
 
 def spend(db: Session, user: User, amount: int, reason: str) -> bool:
